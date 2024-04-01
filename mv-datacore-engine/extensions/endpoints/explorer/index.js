@@ -1,32 +1,35 @@
-const swaggerUi = require("swagger-ui-express");
-const express = require("express");
+const swaggerUi = require('swagger-ui-express')
+const express = require('express')
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs')
+const path = require('path')
 
-module.exports = function registerEndpoint(router, { services, exceptions, env }) {
-  const { SpecificationService } = services;
-  const { ServiceUnavailableException } = exceptions;
+module.exports = function registerEndpoint(
+  router,
+  { services, exceptions, env }
+) {
+  const { SpecificationService } = services
+  const { ServiceUnavailableException } = exceptions
 
-  const openApiPath = path.join(process.cwd(), ".openapi.json");
+  const openApiPath = path.join(process.cwd(), '.openapi.json')
 
-  router.get("/json", async (req, res) => {
-    const { isSystem } = req.query;
-    let schemaType;
+  router.get('/json', async (req, res) => {
+    const { isSystem } = req.query
+    let schemaType
     if (isSystem) {
-      if (isSystem.toLowerCase() === "true") schemaType = true;
-      else if (isSystem.toLowerCase() === "false") schemaType = false;
+      if (isSystem.toLowerCase() === 'true') schemaType = true
+      else if (isSystem.toLowerCase() === 'false') schemaType = false
     }
-    const excludedPaths = ["POST:/auth/login"];
-    const { ADMIN_ID, ADMIN_ROLE } = env;
+    const excludedPaths = ['POST:/auth/login']
+    const { ADMIN_ID, ADMIN_ROLE } = env
     const service = new SpecificationService({
       accountability: {
         user: ADMIN_ID,
         role: ADMIN_ROLE,
         admin: true,
         app: true,
-        ip: "::1",
-        userAgent: "System/1.0.0",
+        ip: '::1',
+        userAgent: 'System/1.0.0',
         share: undefined,
         share_scope: undefined,
         permissions: [],
@@ -35,83 +38,90 @@ module.exports = function registerEndpoint(router, { services, exceptions, env }
       options: {
         isSystem: schemaType,
       },
-    });
-    const json = await service.oas.generate();
-    const auth = [{ Auth: [] }, { bearer: [] }];
+    })
+    const json = await service.oas.generate()
+    const auth = [{ Auth: [] }, { bearer: [] }]
     json.components.securitySchemes.bearer = {
-      scheme: "bearer",
-      bearerFormat: "JWT",
-      type: "http",
-    };
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      type: 'http',
+    }
     if (fs.existsSync(openApiPath)) {
-      const openApi = JSON.parse(fs.readFileSync(openApiPath));
+      const openApi = JSON.parse(fs.readFileSync(openApiPath))
       json.paths = {
         ...json.paths,
         ...openApi.paths,
-      };
+      }
     }
     for (const path in json.paths) {
       for (const method in json.paths[path]) {
-        if (!excludedPaths.includes(`${method.toUpperCase()}:${path}`)) json.paths[path][method].security = auth;
+        if (!excludedPaths.includes(`${method.toUpperCase()}:${path}`))
+          json.paths[path][method].security = auth
       }
     }
-    res.send(json);
-  });
-  router.use("/api-docs", swaggerUi.serve);
-  router.get("/api-docs", async (req, res) => {
-    const excludedPaths = ["POST:/auth/login"];
-    const { ADMIN_ID, ADMIN_ROLE } = env;
+    res.send(json)
+  })
+  router.use('/api-docs', swaggerUi.serve)
+  router.get('/api-docs', async (req, res) => {
+    const excludedPaths = ['POST:/auth/login']
+    const { ADMIN_ID, ADMIN_ROLE } = env
     const service = new SpecificationService({
       accountability: {
         user: ADMIN_ID,
         role: ADMIN_ROLE,
         admin: true,
         app: true,
-        ip: "::1",
-        userAgent: "System/1.0.0",
+        ip: '::1',
+        userAgent: 'System/1.0.0',
         share: undefined,
         share_scope: undefined,
         permissions: [],
       },
       schema: req.schema,
-    });
-    const json = await service.oas.generate();
-    const auth = [{ Auth: [] }, { bearer: [] }];
+    })
+    const json = await service.oas.generate()
+    const auth = [{ Auth: [] }, { bearer: [] }]
     json.components.securitySchemes.bearer = {
-      scheme: "bearer",
-      bearerFormat: "JWT",
-      type: "http",
-    };
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      type: 'http',
+    }
     if (fs.existsSync(openApiPath)) {
-      const openApi = JSON.parse(fs.readFileSync(openApiPath));
+      const openApi = JSON.parse(fs.readFileSync(openApiPath))
       json.paths = {
         ...json.paths,
         ...openApi.paths,
-      };
+      }
     }
     for (const path in json.paths) {
       for (const method in json.paths[path]) {
-        if (!excludedPaths.includes(`${method.toUpperCase()}:${path}`)) json.paths[path][method].security = auth;
+        if (!excludedPaths.includes(`${method.toUpperCase()}:${path}`))
+          json.paths[path][method].security = auth
       }
     }
     return swaggerUi.setup(json, null, {
       persistAuthorization: true,
-      tagsSorter: "alpha",
-      operationsSorter: "alpha",
-    })(req, res);
-  });
-  router.use("/rapi-docs/assets", express.static(path.resolve(`${__dirname}/../../../node_modules/rapidoc/dist`)));
-  router.use("/rapi-docs/custom.js", (req, res) => {
-    res.sendFile(path.resolve(`${__dirname}/custom.js`));
-  });
-  router.use("/rapi-docs/custom.css", (req, res) => {
-    res.sendFile(path.resolve(`${__dirname}/custom.css`));
-  });
-  router.use("/rapi-docs/logo.png", (req, res) => {
-    res.sendFile(path.resolve(`${__dirname}/logo.png`));
-  });
-  router.get("/rapi-docs", async (req, res) => {
-    const { host } = req.headers;
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    })(req, res)
+  })
+  router.use(
+    '/rapi-docs/assets',
+    express.static(
+      path.resolve(`${__dirname}/../../../../node_modules/rapidoc/dist`)
+    )
+  )
+  router.use('/rapi-docs/custom.js', (req, res) => {
+    res.sendFile(path.resolve(`${__dirname}/custom.js`))
+  })
+  router.use('/rapi-docs/custom.css', (req, res) => {
+    res.sendFile(path.resolve(`${__dirname}/custom.css`))
+  })
+  router.use('/rapi-docs/logo.png', (req, res) => {
+    res.sendFile(path.resolve(`${__dirname}/logo.png`))
+  })
+  router.get('/rapi-docs', async (req, res) => {
+    const { host } = req.headers
     res.send(`<!doctype html>
     <html>
       <head>
@@ -144,7 +154,7 @@ module.exports = function registerEndpoint(router, { services, exceptions, env }
                 <option value="read">Read</option>
                 <option value="focused">Focused</option>
               </select>
-            
+
               Schema Type <select id="cbSchemaType">
                 <option value="false">User Spec</option>
                 <option value="true">Sytem Spec</option>
@@ -158,7 +168,7 @@ module.exports = function registerEndpoint(router, { services, exceptions, env }
               <button class='btn small' id="btnSchemaStyleTree">Tree</button>
               <button class='btn small' id="btnSchemaStyleTable">Table</button>
             </div>
-    
+
             <div style="text-align: center; padding: 20px 0 12px 0; color:#47AFE8"> Theme </div>
             <div style="display: flex;justify-content: center; margin: 2px 0">
               <button class='btn small' id="btnThemeDark">Dark</button>
@@ -171,7 +181,7 @@ module.exports = function registerEndpoint(router, { services, exceptions, env }
         </rapi-doc>
       </body>
       <script language="javascript" src="//${host}/explorer/rapi-docs/custom.js"></script>
-    </html>`);
-    res.end();
-  });
-};
+    </html>`)
+    res.end()
+  })
+}
