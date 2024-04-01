@@ -1,0 +1,26 @@
+{
+	"name": "mv-data-core-extension-audits",
+	"version": "1.0.0",
+	"keywords": [
+		"mv-datacore",
+		"mv-datacore-extension",
+		"mv-datacore-custom-endpoint"
+	],
+	"directus:extension": {
+		"type": "endpoint",
+		"path": "../../mv-datacore-engine/extensions/endpoints/audits/index.js",
+		"source": "src/index.ts",
+		"host": "^9.12.0"
+	},
+	"scripts": {
+		"build": "directus-extension build",
+		"dev": "directus-extension build --watch"
+	},
+	"devDependencies": {
+		"@directus/extensions-sdk": "npm:@mv-data-core/extensions-sdk@9.12.0",
+		"@mv-data-core/decorator": "0.0.2",
+		"@mv-data-core/shared": "9.5.3",
+		"@types/node": "^18.16.3",
+		"typescript": "^5.0.4"
+	}
+}

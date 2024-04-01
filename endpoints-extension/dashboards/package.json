@@ -1,0 +1,29 @@
+{
+	"name": "mv-data-core-extension-dashboards",
+	"version": "1.0.0",
+	"keywords": [
+		"mv-datacore",
+		"mv-datacore-extension",
+		"mv-datacore-custom-endpoint"
+	],
+	"directus:extension": {
+		"type": "endpoint",
+		"path": "../../mv-datacore-engine/extensions/endpoints/dashboards/index.js",
+		"source": "src/index.ts",
+		"host": "^9.4.6"
+	},
+	"scripts": {
+		"build": "directus-extension build",
+		"dev": "directus-extension build --watch"
+	},
+	"devDependencies": {
+		"@directus/extensions-sdk": "npm:@mv-data-core/extensions-sdk@9.4.6",
+		"@mv-data-core/decorator": "0.0.2",
+		"@mv-data-core/shared": "9.5.3",
+		"@types/node": "^18.0.0",
+		"typescript": "^4.7.4"
+	},
+	"dependencies": {
+		"axios": "^0.27.2"
+	}
+}

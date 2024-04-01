@@ -1,0 +1,15 @@
+export interface FindAllMenuDto {
+  companyId: number,
+  plantId: number,
+  roleIds: number[],
+  dashboardId: number,
+  clusterId: number,
+  categories: string[],
+  filterBy: string, 
+  search: string,
+  isActive: boolean, 
+  sortBy: string,
+  sortType: string,
+  pagination: number,
+  limit: number,
+}

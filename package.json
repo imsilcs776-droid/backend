@@ -1,0 +1,27 @@
+{
+    "name": "mv-datacores",
+    "private": true,
+    "scripts": {
+        "bootstrap": "lerna bootstrap"
+    },
+    "devDependencies": {
+        "lerna": "^5.0.6"
+    },
+    "workspaces": [
+        "./endpoints-extension/database",
+        "./endpoints-extension/datacore/entities",
+        "./modules/erd-viewer",
+        "./endpoints-extension/meetings",
+        "./endpoints-extension/reports",
+        "./endpoints-extension/imports",
+        "./endpoints-extension/restrictions",
+        "./endpoints-extension/activities",
+        "./endpoints-extension/workflows",
+        "./endpoints-extension/ims",
+        "./endpoints-extension/submissions",
+        "./endpoints-extension/comments",
+        "./endpoints-extension/departments",
+        "./endpoints-extension/notifications",
+        "./mv-datacore-engine"
+    ]
+}

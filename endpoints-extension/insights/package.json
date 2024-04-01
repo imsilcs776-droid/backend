@@ -1,0 +1,27 @@
+{
+	"name": "mv-data-core-extension-insights",
+	"version": "1.0.0",
+	"keywords": [
+		"directus",
+		"directus-extension",
+		"directus-custom-endpoint"
+	],
+	"directus:extension": {
+		"type": "endpoint",
+		"path": "../../mv-datacore-engine/extensions/endpoints/insights/index.js",
+		"source": "src/index.ts",
+		"host": "^9.4.4"
+	},
+	"scripts": {
+		"build": "directus-extension build"
+	},
+	"devDependencies": {
+		"@directus/extensions-sdk": "npm:@mv-data-core/extensions-sdk@9.4.4",
+		"@mv-data-core/decorator": "0.0.1",
+		"@types/node": "^17.0.23",
+		"typescript": "^4.6.3"
+	},
+	"dependencies": {
+		"ml-array-standard-deviation": "^1.1.8"
+	}
+}

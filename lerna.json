@@ -1,0 +1,28 @@
+{
+    "packages": [
+        "endpoints/database",
+        "endpoints/datacore/entities",
+        "modules/erd-viewer",
+        "endpoints/meetings",
+        "endpoints/reports",
+        "endpoints/imports",
+        "endpoints/restrictions",
+        "endpoints/activities",
+        "endpoints/workflows",
+        "endpoints/ims",
+        "endpoints/submissions",
+        "endpoints/comments",
+        "endpoints/departments",
+        "endpoints/notifications",
+        "mv-datacore-engine"
+    ],
+    "version": "2.0.0",
+    "useNx": true,
+    "npmClient": "yarn",
+    "useWorkspaces": true,
+    "command": {
+        "bootstrap": {
+            "npmClientArgs": ["--no-package-lock", "--legacy-peer-deps"]
+        }
+    }
+}

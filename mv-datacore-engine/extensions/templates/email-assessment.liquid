@@ -1,0 +1,19 @@
+{% layout "base" %}
+{% block content %}
+
+<p>
+	Anda medapatkan permitaan untuk melakukan persetujuan yang di ajukan oleh:
+</p>
+
+<p>
+	<b>Nama: {{ full_name }}.</b>
+    <br>
+    <b>email: {{ email }}.</b>
+    <br>
+</p>
+
+<p>
+	pada tautan sebagai berikut. <a href="{{url}}">review dokument</a>
+</p>
+
+{% endblock %}

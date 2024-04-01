@@ -1,0 +1,49 @@
+stages:
+  - build-staging
+  - deploy-staging-local
+
+services:
+  - docker:dind
+
+variables:
+  GIT_SSL_NO_VERIFY: "true"
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+build-staging:
+  stage: build-staging
+  environment:
+    name: develop
+  before_script:
+    - docker login -u "${MV_DOCKER_USERNAME}" -p "${MV_DOCKER_PASSWORD}"
+  script:
+    - echo "Building container image $(sh version-bash.sh)"
+    - docker build -t "${MV_DOCKER_USERNAME}/data-core:$(sh version-bash.sh)" -f staging.dockerfile .
+    - docker push "${MV_DOCKER_USERNAME}/data-core:$(sh version-bash.sh)"
+  after_script:
+    - echo "Finished Bro Bismillah"
+  only:
+    - staging
+  when: manual
+deploy-staging-local:
+  stage: deploy-staging-local
+  tags:
+    - local
+  environment:
+    name: deploy
+  script:
+    - "which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )"
+    - eval $(ssh-agent -s)
+    - printenv S_PRIVATE_KEY | ssh-add -
+    - mkdir -p ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+    - ssh lanius@datacore.lanius.tech bash --login "
+      /home/lanius/mv-setup/docker-compose-abs.sh pull datacore &&
+      /home/lanius/mv-setup/docker-compose-abs.sh up -d datacore &&
+      /home/lanius/mv-setup/seeder.sh"
+  after_script:
+    - echo "Finished"
+  only:
+    - staging
+  when: manual
