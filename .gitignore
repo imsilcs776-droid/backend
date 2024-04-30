@@ -1,3 +1,5 @@
 modules
 layouts
 node_modules
+managed_context
+test_suite_analysis
