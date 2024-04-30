@@ -36,6 +36,12 @@ module.exports = function defineHook(
                 filename_disk: payload.filename_disk,
               },
               is_global_document: payload.is_global_document || true,
+            },
+            {
+              auth: {
+                username: env.ELASTICSEARCH_USERNAME,
+                password: env.ELASTICSEARCH_PASSWORD,
+              }
             }
           )
           logger.info(
