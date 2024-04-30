@@ -402,7 +402,7 @@ export default class DefineEndpoint {
       const { id } = await item.getUser({ req, UsersService })
 
       const logOfficerQuery = database('submissions')
-        .select('submissions.current_form_log as id')
+        .select('submissions.id as id')
         /**
          * ims
          */
@@ -513,19 +513,45 @@ export default class DefineEndpoint {
         )
       }
 
-      console.log(logOfficerQuery.toString())
-      const logOfficer = await logOfficerQuery.groupBy(
-        'submissions.current_form_log'
-      )
+      // console.log(logOfficerQuery.toString())
+      // const logOfficer = await logOfficerQuery.groupBy(
+      //   'submissions.current_form_log'
+      // )
+
+      /**
+       * menggunakan submission karena form assesor lama tidak mempunyai form log
+       */
+      const submissions = await logOfficerQuery.groupBy('submissions.id')
 
       // return logOfficer2.toString()
-      const lastLogs = [...logOfficer.map(({ id }: any) => id)]
+      const logSubmissionIds = [...submissions.map(({ id }: any) => id)]
+
+      const lastLogs = await database
+        .with('a', (qb: any) => {
+          qb.select(
+            'submission',
+            'id',
+            'created_at',
+            database.raw(
+              'ROW_NUMBER() OVER (PARTITION BY submission ORDER BY created_at DESC) as rank'
+            )
+          )
+            .from('form_logs')
+            .whereIn('submission', [...logSubmissionIds])
+        })
+        .select('*')
+        .from('a')
+        .where('a.rank', 1)
+        .orderBy('a.id', 'desc')
+
+      const lastLogIds = [...lastLogs.map(({ id }: any) => id)]
 
       const params = {
         formLogParam: {
           filter: {
-            _and: [{ id: { _in: [...new Set(lastLogs)] } }],
+            _and: [{ id: { _in: [...new Set(lastLogIds)] } }],
           },
+          sort: ['-id'],
           fields: [
             'activity.id',
             'activity.name',
