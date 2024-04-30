@@ -811,7 +811,7 @@ export default class DefineEndpoint {
       const { id } = await item.getUser({ req, UsersService })
 
       const lastLogQuery = database('submissions')
-        .select('submissions.current_form_log as id')
+        .select('submissions.id as id')
         /**
          * ims
          */
@@ -933,18 +933,44 @@ export default class DefineEndpoint {
       if (submissionIds instanceof Array && submissionIds.length) {
         lastLogQuery.whereIn('submissions.id', submissionIds)
       }
+      lastLogQuery.groupBy('submissions.id')
 
       // console.log(await lastLogQuery.toString())
-      const lastLog = await lastLogQuery
+      // const lastLog = await lastLogQuery
       const totalCount = await database
         .select(database.raw('COUNT(a.id) as total'))
         .from(lastLogQuery.distinctOn('id').as('a'))
         .first()
 
+      const submissions = await lastLogQuery
+
+      // return logOfficer2.toString()
+      const logSubmissionIds = [...submissions.map(({ id }: any) => id)]
+
+      const lastLogs = await database
+        .with('a', (qb: any) => {
+          qb.select(
+            'submission',
+            'id',
+            'created_at',
+            database.raw(
+              'ROW_NUMBER() OVER (PARTITION BY submission ORDER BY created_at DESC) as rank'
+            )
+          )
+            .from('form_logs')
+            .whereIn('submission', [...logSubmissionIds])
+        })
+        .select('*')
+        .from('a')
+        .where('a.rank', 1)
+        .orderBy('a.id', 'desc')
+
+      const lastLogIds = [...lastLogs.map(({ id }: any) => id)]
+
       const params = {
         formLogParam: {
           filter: {
-            _and: [{ id: { _in: lastLog.map(({ id }: any) => id) } }],
+            _and: [{ id: { _in: [...new Set(lastLogIds)] } }],
           },
           fields: [
             'activity.id',
@@ -2043,11 +2069,15 @@ export default class DefineEndpoint {
        *  DISPS = disposisi
        *  APPRD = approve
        */
-      if (lastcode === 'DISPS') {
-        await trx('form_assesors')
-          .where({ submission: submissionId, form_actor: approveTo })
-          .del()
-      }
+
+      /**
+       * v2 disposisi no need remove form_assesors
+       */
+      // if (lastcode === 'DISPS') {
+      //   await trx('form_assesors')
+      //     .where({ submission: submissionId, form_actor: approveTo })
+      //     .del()
+      // }
 
       if (approveTo) {
         await trx('form_assesors').insert({
@@ -2425,7 +2455,7 @@ export default class DefineEndpoint {
        *  DISPS = disposisi
        *  APPRD = approve
        */
-      await trx('form_assesors').where({ submission: submissionId }).del()
+      // await trx('form_assesors').where({ submission: submissionId }).del()
 
       await trx('form_assesors').insert({
         created_by: userId,
@@ -2802,7 +2832,7 @@ export default class DefineEndpoint {
        *  DISPS = disposisi
        *  APPRD = approve
        */
-      await trx('form_assesors').where({ submission: submissionId }).del()
+      // await trx('form_assesors').where({ submission: submissionId }).del()
 
       await trx('form_assesors').insert({
         created_by: userId,
