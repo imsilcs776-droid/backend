@@ -1636,6 +1636,7 @@ export default class DefineEndpoint {
           form_actor: assignTo,
           officer: userId,
           disposer: false,
+          form_log: idLog,
           replaced,
         },
         {
@@ -2079,19 +2080,6 @@ export default class DefineEndpoint {
       //     .del()
       // }
 
-      if (approveTo) {
-        await trx('form_assesors').insert({
-          created_by: userId,
-          created_at: new Date(),
-          updated_at: new Date(),
-          submission: submissionId,
-          form_actor: approveTo,
-          officer: dispose_to ?? assignToUserId,
-          disposer: !!dispose_to,
-          replaced,
-        })
-      }
-
       /**
        * update submission
        */
@@ -2134,6 +2122,29 @@ export default class DefineEndpoint {
           reject_number,
         })
         .returning('id')
+
+      if (approveTo) {
+        await trx('form_assesors')
+          .update({ form_log: idLog })
+          .where('id', '=', function (qb: any) {
+            qb.select('id')
+              .from('form_assesors')
+              .where('submission', submissionId)
+              .orderBy('id', 'desc')
+              .limit(1)
+          })
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: approveTo,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
+      }
 
       await trx('submissions')
         .where({ id: submissionId })
@@ -2457,15 +2468,6 @@ export default class DefineEndpoint {
        */
       // await trx('form_assesors').where({ submission: submissionId }).del()
 
-      await trx('form_assesors').insert({
-        created_by: userId,
-        created_at: new Date(),
-        updated_at: new Date(),
-        submission: submissionId,
-        officer: assignToUserId,
-        form_actor: formActor,
-      })
-
       /**
        * update submission
        */
@@ -2515,6 +2517,25 @@ export default class DefineEndpoint {
           reject_number: reject_number + 1,
         })
         .returning('id')
+
+      await trx('form_assesors')
+        .update({ form_log: idLog })
+        .where('id', '=', function (qb: any) {
+          qb.select('id')
+            .from('form_assesors')
+            .where('submission', submissionId)
+            .orderBy('id', 'desc')
+            .limit(1)
+        })
+
+      await trx('form_assesors').insert({
+        created_by: userId,
+        created_at: new Date(),
+        updated_at: new Date(),
+        submission: submissionId,
+        officer: assignToUserId,
+        form_actor: formActor,
+      })
 
       await trx('submissions')
         .where({ id: submissionId })
@@ -2834,15 +2855,6 @@ export default class DefineEndpoint {
        */
       // await trx('form_assesors').where({ submission: submissionId }).del()
 
-      await trx('form_assesors').insert({
-        created_by: userId,
-        created_at: new Date(),
-        updated_at: new Date(),
-        submission: submissionId,
-        officer: created_by,
-        form_actor: formActor,
-      })
-
       /**
        * update submission
        */
@@ -2892,6 +2904,25 @@ export default class DefineEndpoint {
           reject_number: reject_number + 1,
         })
         .returning('id')
+
+      await trx('form_assesors')
+        .update({ form_log: idLog })
+        .where('id', '=', function (qb: any) {
+          qb.select('id')
+            .from('form_assesors')
+            .where('submission', submissionId)
+            .orderBy('id', 'desc')
+            .limit(1)
+        })
+
+      await trx('form_assesors').insert({
+        created_by: userId,
+        created_at: new Date(),
+        updated_at: new Date(),
+        submission: submissionId,
+        officer: created_by,
+        form_actor: formActor,
+      })
 
       await trx('submissions')
         .where({ id: submissionId })
@@ -3303,57 +3334,26 @@ export default class DefineEndpoint {
 
     const trx = await database.transaction()
     try {
-      /**
-       * get aprover to and order from last form_logs
-       *
-       * order for get next approver
-       * approveTo for update actorassignToUserId
-       */
+      await trx('form_assesors')
+        .where('id', '=', function (qb: any) {
+          qb.select('id')
+            .from('form_assesors')
+            .where('submission', submissionId)
+            .orderBy('id', 'desc')
+            .limit(1)
+        })
+        .del()
 
-      const lastAssesor = await trx('form_assesors')
-        .where('form_assesors.submission', submissionId)
-        .orderBy('form_assesors.id', 'desc')
-        .first()
+      await trx('form_logs')
+        .where('id', '=', function (qb: any) {
+          qb.select('id')
+            .from('form_logs')
+            .where('submission', submissionId)
+            .orderBy('id', 'desc')
+            .limit(1)
+        })
+        .del()
 
-      if (lastAssesor) {
-        // const { code } =
-        //   (await trx('form_logs')
-        //     .select('form_logs.id', 'statuses.code')
-        //     .join('statuses', 'statuses.id', 'form_logs.status')
-        //     .where('form_logs.submission', submissionId)
-        //     .orderBy('form_logs.id', 'desc')
-        //     .first()) || {}
-
-        const [last_logs, old_logs] = await trx('form_logs')
-          .select('form_logs.id', 'form_logs.created_by')
-          .where('form_logs.submission', submissionId)
-          .orderBy('form_logs.id', 'desc')
-          .limit(2)
-
-        // if (code !== 'DISPS') {
-        //   await trx('form_assesors')
-        //     .where('form_assesors.id', lastAssesor.id)
-        //     .del()
-        // }
-
-        // if (code === 'DISPS') {
-        //   await trx('form_assesors')
-        //     .where({ id: lastAssesor.id })
-        //     .update({ officer: last_logs.created_by })
-        // }
-
-        await trx('form_assesors')
-          .where({ id: lastAssesor.id })
-          .update({ officer: last_logs.created_by })
-
-        await trx('submissions')
-          .where({ id: submissionId })
-          .update({ current_form_log: old_logs.id })
-
-        await trx('form_logs').where('id', last_logs.id).del()
-      } else {
-        throw new Error('rollback failed')
-      }
       await trx.commit()
 
       return {
@@ -3432,13 +3432,13 @@ export default class DefineEndpoint {
       const { id: statusId } =
         (await trx('statuses').select('*').where('code', status).first()) || {}
 
-      console.log(
-        'sts',
-        statusId,
-        status,
-        approve_order_id,
-        officer_replacer_id
-      )
+      // console.log(
+      //   'sts',
+      //   statusId,
+      //   status,
+      //   approve_order_id,
+      //   officer_replacer_id
+      // )
 
       const { id: next_order } =
         (await trx('approve_orders')
@@ -3458,20 +3458,21 @@ export default class DefineEndpoint {
           status: statusId,
         })
 
-      const { assign_to } =
-        (await trx('approve_orders')
-          .select('approve_orders.assign_to')
-          .where({
-            id: approve_order_id,
-          })
-          .first()) || {}
+      // const { assign_to } =
+      //   (await trx('approve_orders')
+      //     .select('approve_orders.assign_to')
+      //     .where({
+      //       id: approve_order_id,
+      //     })
+      //     .first()) || {}
 
-      await trx('form_assesors')
-        .where({
-          submission: submissionId,
-          form_actor: assign_to,
-        })
-        .update({ officer: officer_replacer_id })
+      // await trx('form_assesors')
+      //   .where({
+      //     submission: submissionId,
+      //     form_actor: assign_to,
+      //     form_log: form_logs_id,
+      //   })
+      //   .update({ officer: officer_replacer_id })
 
       await trx.commit()
 
