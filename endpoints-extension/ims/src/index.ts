@@ -3401,7 +3401,80 @@ export default class DefineEndpoint {
 
   @Get(
     {
-      path: '/recomendation-assesor',
+      path: '/recomendation-assesor/atasan',
+      tag: 'IMS/file-publisers',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async recomendationAssesorAtasan(@Context() ctx: any, @Req() req: any) {
+    const {
+      services: { UsersService },
+      database,
+    } = ctx
+    const {
+      full_name,
+      nip_new: nippNew,
+      department: myDepartment,
+    } = await item.getUser({
+      req,
+      UsersService,
+    })
+    try {
+      if (!nippNew) throw new Error('NIPP not found')
+      /**
+       * jika belum ada submission akan langsung mencari atasan
+       */
+      const atasanLangsung = await database('peo_atasan_bawahan')
+        .select(
+          'directus_users.id',
+          'directus_users.full_name',
+          'peo_atasan_bawahan.kd_div_ats as department_code_ats',
+          'peo_atasan_bawahan.kd_div as department_code'
+        )
+        .join(
+          'directus_users',
+          'directus_users.nip_new',
+          'peo_atasan_bawahan.nipp_ats_baru'
+        )
+        .where('peo_atasan_bawahan.nipp_baru', nippNew)
+        .where('directus_users.source', 'PEO')
+        .orderBy('peo_atasan_bawahan.lvl', 'desc')
+
+      return {
+        data: atasanLangsung,
+        meta: { me: { full_name, nippNew, myDepartment } },
+        success: true,
+        message: 'Successfully Get recomendation',
+      }
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    {
+      path: '/recomendation-assesor/same-level/step2',
       tag: 'IMS/file-publisers',
     },
     {
@@ -3428,16 +3501,10 @@ export default class DefineEndpoint {
           schema: { type: 'number' },
           required: false,
         },
-        {
-          in: 'query',
-          name: 'isDispose',
-          schema: { type: 'number' },
-          required: false,
-        },
       ],
     }
   )
-  async recomendationAssesor(
+  async recomendationAssesorSameLevel(
     @Query('submission_id') submissionId: number,
     @Context() ctx: any,
     @Req() req: any
@@ -3446,7 +3513,11 @@ export default class DefineEndpoint {
       services: { UsersService },
       database,
     } = ctx
-    const { nip_new: nippNew, department: myDepartment } = await item.getUser({
+    const {
+      full_name,
+      nip_new: nippNew,
+      department: myDepartment,
+    } = await item.getUser({
       req,
       UsersService,
     })
@@ -3457,32 +3528,23 @@ export default class DefineEndpoint {
     }
     try {
       if (!nippNew) throw new Error('NIPP not found')
-      /**
-       * jika belum ada submission akan langsung mencari atasan
-       */
-      if (!submissionId) {
-        const response = await client.providerClient.getAtasan(nippNew)
+      if (!submissionId) throw new Error('submissionId is required')
 
-        console.log(response)
+      const atasanLangsung = await database('peo_atasan_bawahan')
+        .select(
+          'directus_users.id',
+          'directus_users.full_name',
+          'peo_atasan_bawahan.kd_div_ats as department_code'
+        )
+        .join(
+          'directus_users',
+          'directus_users.nip_new',
+          'peo_atasan_bawahan.nipp_ats_baru'
+        )
+        .where('peo_atasan_bawahan.nipp_baru', nippNew)
+        .where('directus_users.source', 'PEO')
+        .orderBy('peo_atasan_bawahan.lvl', 'desc')
 
-        const {
-          result: [atasan1],
-        } = response || { result: [] }
-        if (atasan1?.nipp_atasan) {
-          const recomendUser = await database('directus_users')
-            .select('id', 'full_name', 'department')
-            .where('nip_new', atasan1.nipp_atasan)
-
-          return {
-            success: true,
-            message: 'Successfully Get recomendation',
-            data: recomendUser,
-            meta: {},
-          }
-        } else {
-          throw new Error('Atasan not found')
-        }
-      }
       if (submissionId) {
         const { data, order } =
           (await database('form_logs')
@@ -3506,8 +3568,6 @@ export default class DefineEndpoint {
           }
           return acc
         }, {})
-
-        console.log(units, department, departmentIds, unitsIds)
 
         const { quota, reject_number } =
           (await database('form_logs')
@@ -3569,6 +3629,7 @@ export default class DefineEndpoint {
                   'approve_orders.id',
                   'form_logs.approve_order'
                 )
+                .where('directus_users.source', 'PEO')
                 .where('form_logs.submission', submissionId)
                 .where('form_logs.reject_number', reject_number)
                 .where('approve_orders.order', 2)) || []
@@ -3586,134 +3647,256 @@ export default class DefineEndpoint {
 
             console.log(allUnitNotDone)
 
+            /**
+             * jika sudah tidak ada unit lagi yang tersisa,
+             * maka akan mengembalikan atasan langsung
+             */
+            if (allUnitNotDone?.length === 0) {
+              return {
+                data: [atasanLangsung],
+                meta: { me: { full_name, nippNew, myDepartment } },
+                success: true,
+                message: 'Successfully Get recomendation',
+              }
+            }
+
             const recomendUser = await database('directus_users')
               .select('id', 'full_name', 'department')
               .whereIn('department', allUnitNotDone)
+              .where('directus_users.source', 'PEO')
 
             return {
+              data: recomendUser,
+              meta: { me: { full_name, nippNew, myDepartment } },
               success: true,
               message: 'Successfully Get recomendation',
-              data: recomendUser,
-              meta: {
-                units,
-                department,
-                reject_count: reject_number,
-                order: order,
-                approver: approver,
-                quota: Number(quota),
-              },
             }
-          }
-
-          if (apprType.DH === approver) {
-            /**
-             * mencari dh yang sudah ada
-             */
-            const deptDone =
-              (await database('form_logs')
-                .select('mt_departments.id')
-                .join(
-                  'directus_users',
-                  'directus_users.id',
-                  'form_logs.created_by'
-                )
-                .join(
-                  'mt_departments',
-                  'mt_departments.id',
-                  'directus_users.department'
-                )
-                .join(
-                  'approve_orders',
-                  'approve_orders.id',
-                  'form_logs.approve_order'
-                )
-                .where('form_logs.submission', submissionId)
-                .where('form_logs.reject_number', reject_number)
-                .where('approve_orders.order', 2)) || []
-            // .where('directus_users.id', )
-
-            const myDept = myDepartment
-            const allDeptDone = [
-              ...new Set(deptDone.map((u: any) => u.id)),
-              myDept,
-            ]
-            const allDeptNotDone = departmentIds.filter(
-              (e: number) => !allDeptDone.includes(e)
-            )
-
-            const recomendUser = await database('directus_users')
-              .select('id', 'full_name', 'department')
-              .whereIn('department', allDeptNotDone)
-
-            return {
-              success: true,
-              message: 'Successfully Get recomendation',
-              data: recomendUser,
-              meta: {
-                units,
-                department,
-                reject_count: reject_number,
-                order: order,
-                approver: approver,
-                quota: Number(quota),
-              },
-            }
-          }
-
-          throw new Error("Can't find recomendation 1")
-        }
-
-        if (order === 3) {
-          const response = await client.providerClient.getAtasan(nippNew)
-
-          console.log(response)
-
-          const {
-            result: [atasan1],
-          } = response || { result: [] }
-          if (atasan1?.nipp_atasan) {
-            const recomendUser = await database('directus_users')
-              .select('id', 'full_name', 'department')
-              .where('nip_new', atasan1.nipp_atasan)
-
-            return {
-              success: true,
-              message: 'Successfully Get recomendation',
-              data: recomendUser,
-              meta: {},
-            }
-          } else {
-            throw new Error('Atasan not found')
           }
         }
-
-        if (order === 4) {
-          const response = await client.providerClient.getAtasan(nippNew)
-
-          console.log(response)
-
-          const {
-            result: [atasan1],
-          } = response || { result: [] }
-          if (atasan1?.nipp_atasan) {
-            const recomendUser = await database('directus_users')
-              .select('id', 'full_name', 'department')
-              .where('nip_new', atasan1.nipp_atasan)
-
-            return {
-              success: true,
-              message: 'Successfully Get recomendation',
-              data: recomendUser,
-              meta: {},
-            }
-          } else {
-            throw new Error('Atasan not found')
-          }
-        }
-
-        throw new Error("Can't find recomendation 2")
       }
-      throw new Error("Can't find recomendation 3")
+      throw new Error("Can't find recomendation")
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    {
+      path: '/recomendation-assesor/same-level/by-department',
+      tag: 'IMS/file-publisers',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async recomendationAssesorByDepartment(@Context() ctx: any, @Req() req: any) {
+    const {
+      services: { UsersService },
+      database,
+    } = ctx
+    const {
+      full_name,
+      nip_new: nippNew,
+      department: myDepartment,
+    } = await item.getUser({
+      req,
+      UsersService,
+    })
+    try {
+      if (!nippNew) throw new Error('NIPP not found')
+
+      const atasanByDepartment = await database
+        .with('peo_atasan_bawahan_atas', (qb: any) => {
+          qb.select('kd_div_ats as kd_div')
+            .from('peo_atasan_bawahan')
+            .where('peo_atasan_bawahan.nipp_baru', nippNew)
+            .orderBy('peo_atasan_bawahan.lvl', 'desc')
+            .limit(1)
+        })
+        .select(
+          'peo_atasan_bawahan_setara.kd_div as department_code',
+          'peo_atasan_bawahan_setara.kd_div_ats as department_code_ats',
+          'peo_atasan_bawahan_setara.pegawai',
+          'directus_users.full_name',
+          'directus_users.id'
+        )
+        .from('peo_atasan_bawahan_atas')
+        .join(
+          'peo_atasan_bawahan as peo_atasan_bawahan_setara',
+          'peo_atasan_bawahan_setara.kd_div_ats',
+          'peo_atasan_bawahan_atas.kd_div'
+        )
+        .join(
+          'directus_users',
+          'directus_users.nip_new',
+          'peo_atasan_bawahan_setara.nipp_baru'
+        )
+        .where('directus_users.source', 'PEO')
+
+      return {
+        data: atasanByDepartment,
+        meta: { me: { full_name, nippNew, myDepartment } },
+        success: true,
+        message: 'Successfully Get recomendation',
+      }
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    {
+      path: '/recomendation-assesor/bawahan',
+      tag: 'IMS/file-publisers',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async recomendationAssesorBawahan(@Context() ctx: any, @Req() req: any) {
+    const {
+      services: { UsersService },
+      database,
+    } = ctx
+    const {
+      full_name,
+      nip_new: nippNew,
+      department: myDepartment,
+    } = await item.getUser({
+      req,
+      UsersService,
+    })
+    try {
+      if (!nippNew) throw new Error('NIPP not found')
+
+      const bawahan = await database('peo_atasan_bawahan')
+        .select(
+          'peo_atasan_bawahan.kd_div as department_code',
+          'peo_atasan_bawahan.kd_div_ats as department_code_ats',
+          'peo_atasan_bawahan.pegawai',
+          'directus_users.full_name',
+          'directus_users.id'
+        )
+        .join(
+          'directus_users',
+          'directus_users.nip_new',
+          'peo_atasan_bawahan.nipp_baru'
+        )
+        .where('peo_atasan_bawahan.nipp_ats_baru', nippNew)
+      return {
+        data: bawahan,
+        meta: { me: { full_name, nippNew, myDepartment } },
+        success: true,
+        message: 'Successfully Get recomendation',
+      }
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    {
+      path: '/recomendation-assesor/sisman',
+      tag: 'IMS/file-publisers',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async recomendationAssesorSisman(@Context() ctx: any, @Req() req: any) {
+    const {
+      services: { UsersService },
+      database,
+    } = ctx
+    const {
+      full_name,
+      nip_new: nippNew,
+      department: myDepartment,
+    } = await item.getUser({
+      req,
+      UsersService,
+    })
+    try {
+      if (!nippNew) throw new Error('NIPP not found')
+
+      const bawahan = await database('peo_atasan_bawahan')
+        .select(
+          'peo_atasan_bawahan.kd_div as department_code',
+          'peo_atasan_bawahan.kd_div_ats as department_code_ats',
+          'peo_atasan_bawahan.pegawai',
+          'directus_users.full_name',
+          'directus_users.id'
+        )
+        .join(
+          'directus_users',
+          'directus_users.nip_new',
+          'peo_atasan_bawahan.nipp_baru'
+        )
+        .where('directus_users.source', 'PEO')
+        .where('peo_atasan_bawahan.kd_div', 'ilike', `%SIM%`)
+      return {
+        data: bawahan,
+        meta: { me: { full_name, nippNew, myDepartment } },
+        success: true,
+        message: 'Successfully Get recomendation',
+      }
     } catch (error: any) {
       console.log(error)
       return {
