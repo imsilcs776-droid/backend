@@ -3905,4 +3905,100 @@ export default class DefineEndpoint {
       }
     }
   }
+
+  @Get(
+    {
+      path: '/dashboard/probis',
+      tag: 'IMS/dasboard',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+      parameters: [
+        {
+          in: 'query',
+          name: 'business',
+          schema: { type: 'number' },
+          required: true,
+        },
+        {
+          in: 'query',
+          name: 'company',
+          schema: { type: 'string' },
+          required: true,
+          example: 'PELINDO',
+        },
+      ],
+    }
+  )
+  async dashboardProbis(
+    @Context() ctx: any,
+    @Query('business') business: number,
+    @Query('i_com_code') company: string
+  ) {
+    try {
+      const { database } = ctx
+
+      if (!business) throw new Error('Business parameter is required')
+
+      const pengesahan = await database('submissions as b')
+        .join('form_logs as c', 'b.current_form_log', 'c.id')
+        .join('approve_orders as d', 'c.approve_order', 'd.id')
+        .join('form_actors as e', 'd.assign_to', 'e.id')
+        .whereIn('d.order', [1, 2, 3])
+        .where('b.business', business)
+        .groupBy('d.order', 'e.name')
+        .select('e.name', 'd.order')
+        .count('b.id as jumlah')
+
+      const peninjauan = await database('submissions as b')
+        .join('form_logs as c', 'b.current_form_log', 'c.id')
+        .join('approve_orders as d', 'c.approve_order', 'd.id')
+        .join('form_actors as e', 'd.assign_to', 'e.id')
+        .whereIn('d.order', [4, 5, 6])
+        .where('b.business', business)
+        .groupBy('d.order', 'e.name')
+        .select('e.name', 'd.order')
+        .count('b.id as jumlah')
+
+      const [publish] = (await database('file_publishers as q')
+        .join('statuses as w', 'q.status', 'w.id')
+        .join('submissions as r', 'r.id', 'q.submission')
+        .where('w.code', 'PUBLS')
+        .where('r.business', 9)
+        .count('q.id as jumlah')) || [{ jumlah: 0 }]
+
+      const publishCount = {
+        ...publish,
+        name: 'Publish',
+        order: null,
+      }
+
+      return {
+        success: true,
+        message: 'Successfully',
+        data: { pengesahan, peninjauan, publish: [publishCount] },
+      }
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
 }
