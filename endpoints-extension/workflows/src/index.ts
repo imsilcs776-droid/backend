@@ -1,4 +1,3 @@
-import { Join } from './../../questions/src/interfaces/virtual-agregate.interface'
 import {
   Body,
   Context,
@@ -1425,7 +1424,7 @@ export default class DefineEndpoint {
     const {
       services: { UsersService, ItemsService },
       database,
-      env,
+      // env,
     } = ctx
 
     if (!assignToUserId) {
@@ -1436,6 +1435,7 @@ export default class DefineEndpoint {
       id: userId,
       email,
       full_name,
+      pegawai,
     } = await item.getUser({ req, UsersService })
 
     const trx = await database.transaction()
@@ -1599,6 +1599,7 @@ export default class DefineEndpoint {
           submission_revice,
           status: statusesId,
           repo_revice,
+          com_code: pegawai || 'PELINDO',
         })
         .returning('*')
 
@@ -1657,48 +1658,6 @@ export default class DefineEndpoint {
           .update({ deleted_at: new Date() })
       }
 
-      /**
-       * WARNIG!!
-       * contain IMS
-       */
-
-      // const { detail } = data || {}
-      // const {
-      //   judul,
-      //   description,
-      //   directorate,
-      //   division,
-      //   applicableFor,
-      //   documentNumber,
-      //   departments = [],
-      //   units = [],
-      // } = Object.keys(detail).reduce((acc: any, ctx: string) => {
-      //   if (ctx === 'judul') {
-      //     acc[ctx] = detail[ctx].value
-      //   }
-      //   if (ctx.toLowerCase().includes('deskripsi')) {
-      //     acc['description'] = detail[ctx].value
-      //   }
-      //   if (ctx === 'penomoran_dokumen') {
-      //     const {
-      //       department = [],
-      //       units = [],
-      //       directorate,
-      //       division,
-      //       applicableFor,
-      //       documentNumber,
-      //     } = detail[ctx].value || {}
-
-      //     acc.departments = department.map((dep: any) => dep.id)
-      //     acc.units = units.map((unit: any) => unit.id)
-      //     acc.directorate = directorate?.id || null
-      //     acc.division = division?.id || null
-      //     acc.applicableFor = applicableFor?.id || null
-      //     acc.documentNumber = documentNumber || null
-      //   }
-      //   return acc
-      // }, {})
-
       const idMeta = v4()
       await trx('document_metas').insert({
         id: idMeta,
@@ -1718,6 +1677,7 @@ export default class DefineEndpoint {
          */
         area_numbering_apply: applicableFor,
         code: 'PROBIS345',
+        com_code: pegawai || 'PELINDO',
       })
 
       if (departments && departments.length) {

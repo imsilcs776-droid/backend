@@ -3948,7 +3948,7 @@ export default class DefineEndpoint {
   async dashboardProbis(
     @Context() ctx: any,
     @Query('business') business: number,
-    @Query('i_com_code') company: string
+    @Query('company') company: string
   ) {
     try {
       const { database } = ctx
@@ -3979,7 +3979,7 @@ export default class DefineEndpoint {
         .join('statuses as w', 'q.status', 'w.id')
         .join('submissions as r', 'r.id', 'q.submission')
         .where('w.code', 'PUBLS')
-        .where('r.business', 9)
+        .where('b.business', business)
         .count('q.id as jumlah')) || [{ jumlah: 0 }]
 
       const publishCount = {
