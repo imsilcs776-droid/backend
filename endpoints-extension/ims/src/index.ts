@@ -3955,7 +3955,7 @@ export default class DefineEndpoint {
 
       if (!business) throw new Error('Business parameter is required')
 
-      const pengesahan = await database('submissions as b')
+      const pengesahanQuery = database('submissions as b')
         .join('form_logs as c', 'b.current_form_log', 'c.id')
         .join('approve_orders as d', 'c.approve_order', 'd.id')
         .join('form_actors as e', 'd.assign_to', 'e.id')
@@ -3965,7 +3965,7 @@ export default class DefineEndpoint {
         .select('e.name', 'd.order')
         .count('b.id as jumlah')
 
-      const peninjauan = await database('submissions as b')
+      const peninjauanQuery = database('submissions as b')
         .join('form_logs as c', 'b.current_form_log', 'c.id')
         .join('approve_orders as d', 'c.approve_order', 'd.id')
         .join('form_actors as e', 'd.assign_to', 'e.id')
@@ -3975,12 +3975,24 @@ export default class DefineEndpoint {
         .select('e.name', 'd.order')
         .count('b.id as jumlah')
 
-      const [publish] = (await database('file_publishers as q')
+      const publishQuery = database('file_publishers as q')
         .join('statuses as w', 'q.status', 'w.id')
         .join('submissions as r', 'r.id', 'q.submission')
         .where('w.code', 'PUBLS')
-        .where('b.business', business)
-        .count('q.id as jumlah')) || [{ jumlah: 0 }]
+        .where('r.business', business)
+        .count('q.id as jumlah')
+
+      if (company) {
+        pengesahanQuery.where('b.com_code', company)
+        peninjauanQuery.where('b.com_code', company)
+        publishQuery.where('r.com_code', company)
+      }
+
+      const pengesahan = await pengesahanQuery
+
+      const peninjauan = await peninjauanQuery
+
+      const [publish] = (await publishQuery) || [{ jumlah: 0 }]
 
       const publishCount = {
         ...publish,
