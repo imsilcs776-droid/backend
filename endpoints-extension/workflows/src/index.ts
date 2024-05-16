@@ -18,6 +18,95 @@ import { v4 } from 'uuid'
 @Endpoint('workflows')
 export default class DefineEndpoint {
   @Get(
+    { path: '/queryTest', tag: 'test' },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async queryTest(@Context() ctx: any, @Req() req: any) {
+    const {
+      services: { UsersService, ItemsService },
+      database,
+      // env,
+    } = ctx
+
+    const {
+      id: userId,
+      email,
+      full_name,
+      pegawai,
+    } = await item.getUser({ req, UsersService })
+
+    const trx = await database.transaction()
+    try {
+      /**
+       * WARNIG!!
+       * contain IMS
+       */
+
+      const userLog = await trx('directus_users')
+        .select(
+          'directus_users.id',
+          'directus_users.first_name',
+          'directus_users.last_name',
+          'directus_users.email',
+          'directus_users.avatar',
+          'directus_users.external_identifier',
+          'directus_users.full_name',
+          'directus_users.nip',
+          'directus_users.created_at',
+          'directus_users.updated_at',
+          'directus_users.i_department_code',
+          'directus_users.i_com_code',
+          'directus_users.i_job_code',
+          'directus_users.i_job_name',
+          'directus_users.i_werk',
+          'directus_users.i_id',
+          'directus_users.i_endda',
+          'directus_users.nip_new',
+          'directus_users.source',
+          'directus_users.pegawai',
+          'mt_departments.name as department_name',
+          'mt_departments.code as department_code'
+        )
+        .join(
+          'mt_departments',
+          'mt_departments.id',
+          'directus_users.department'
+        )
+        .where('directus_users.id', userId)
+        .first()
+
+      return {
+        success: true,
+        message: 'Successfully test query',
+        userLog,
+      }
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
     { path: '/todo-fills', tag: 'Workflow' },
     {
       responses: [
@@ -1445,6 +1534,39 @@ export default class DefineEndpoint {
        * contain IMS
        */
 
+      const userLog = await trx('directus_users')
+        .select(
+          'directus_users.id',
+          'directus_users.first_name',
+          'directus_users.last_name',
+          'directus_users.email',
+          'directus_users.avatar',
+          'directus_users.external_identifier',
+          'directus_users.full_name',
+          'directus_users.nip',
+          'directus_users.created_at',
+          'directus_users.updated_at',
+          'directus_users.i_department_code',
+          'directus_users.i_com_code',
+          'directus_users.i_job_code',
+          'directus_users.i_job_name',
+          'directus_users.i_werk',
+          'directus_users.i_id',
+          'directus_users.i_endda',
+          'directus_users.nip_new',
+          'directus_users.source',
+          'directus_users.pegawai',
+          'mt_departments.name as department_name',
+          'mt_departments.code as department_code'
+        )
+        .join(
+          'mt_departments',
+          'mt_departments.id',
+          'directus_users.department'
+        )
+        .where('directus_users.id', userId)
+        .first()
+
       const { detail } = data || {}
       const {
         judul,
@@ -1455,6 +1577,11 @@ export default class DefineEndpoint {
         documentNumber,
         departments = [],
         units = [],
+        deptsLog,
+        divLog,
+        dirLog,
+        unitsLog,
+        areaLog,
       } = Object.keys(detail).reduce((acc: any, ctx: string) => {
         if (ctx === 'judul') {
           acc[ctx] = detail[ctx].value
@@ -1478,6 +1605,12 @@ export default class DefineEndpoint {
           acc.division = division?.id || null
           acc.applicableFor = applicableFor?.id || null
           acc.documentNumber = documentNumber || null
+
+          acc.deptsLog = department
+          acc.divLog = division
+          acc.dirLog = directorate
+          acc.unitsLog = units
+          acc.areaLog = applicableFor
         }
         return acc
       }, {})
@@ -1621,6 +1754,7 @@ export default class DefineEndpoint {
           approve_order: approveOrderId,
           next_order: nextApproveOrderId,
           data,
+          assignee_log: userLog,
         })
         .returning('id')
 
@@ -1678,6 +1812,11 @@ export default class DefineEndpoint {
         area_numbering_apply: applicableFor,
         code: 'PROBIS345',
         com_code: pegawai || 'PELINDO',
+        depts_log: deptsLog,
+        div_log: divLog,
+        dir_log: dirLog,
+        units_log: unitsLog,
+        area_log: areaLog,
       })
 
       if (departments && departments.length) {
@@ -1947,6 +2086,38 @@ export default class DefineEndpoint {
 
     const trx = await database.transaction()
     try {
+      const userLog = await trx('directus_users')
+        .select(
+          'directus_users.id',
+          'directus_users.first_name',
+          'directus_users.last_name',
+          'directus_users.email',
+          'directus_users.avatar',
+          'directus_users.external_identifier',
+          'directus_users.full_name',
+          'directus_users.nip',
+          'directus_users.created_at',
+          'directus_users.updated_at',
+          'directus_users.i_department_code',
+          'directus_users.i_com_code',
+          'directus_users.i_job_code',
+          'directus_users.i_job_name',
+          'directus_users.i_werk',
+          'directus_users.i_id',
+          'directus_users.i_endda',
+          'directus_users.nip_new',
+          'directus_users.source',
+          'directus_users.pegawai',
+          'mt_departments.name as department_name',
+          'mt_departments.code as department_code'
+        )
+        .join(
+          'mt_departments',
+          'mt_departments.id',
+          'directus_users.department'
+        )
+        .where('directus_users.id', userId)
+        .first()
       /**
        * get statuses id
        */
@@ -2080,6 +2251,7 @@ export default class DefineEndpoint {
           data,
           reason,
           reject_number,
+          assignee_log: userLog,
         })
         .returning('id')
 
@@ -2377,6 +2549,39 @@ export default class DefineEndpoint {
 
     const trx = await database.transaction()
     try {
+      const userLog = await trx('directus_users')
+        .select(
+          'directus_users.id',
+          'directus_users.first_name',
+          'directus_users.last_name',
+          'directus_users.email',
+          'directus_users.avatar',
+          'directus_users.external_identifier',
+          'directus_users.full_name',
+          'directus_users.nip',
+          'directus_users.created_at',
+          'directus_users.updated_at',
+          'directus_users.i_department_code',
+          'directus_users.i_com_code',
+          'directus_users.i_job_code',
+          'directus_users.i_job_name',
+          'directus_users.i_werk',
+          'directus_users.i_id',
+          'directus_users.i_endda',
+          'directus_users.nip_new',
+          'directus_users.source',
+          'directus_users.pegawai',
+          'mt_departments.name as department_name',
+          'mt_departments.code as department_code'
+        )
+        .join(
+          'mt_departments',
+          'mt_departments.id',
+          'directus_users.department'
+        )
+        .where('directus_users.id', userId)
+        .first()
+
       /**
        * get statuses id
        */
@@ -2475,6 +2680,7 @@ export default class DefineEndpoint {
           data,
           reason,
           reject_number: reject_number + 1,
+          assignee_log: userLog,
         })
         .returning('id')
 
@@ -2757,6 +2963,38 @@ export default class DefineEndpoint {
 
     const trx = await database.transaction()
     try {
+      const userLog = await trx('directus_users')
+        .select(
+          'directus_users.id',
+          'directus_users.first_name',
+          'directus_users.last_name',
+          'directus_users.email',
+          'directus_users.avatar',
+          'directus_users.external_identifier',
+          'directus_users.full_name',
+          'directus_users.nip',
+          'directus_users.created_at',
+          'directus_users.updated_at',
+          'directus_users.i_department_code',
+          'directus_users.i_com_code',
+          'directus_users.i_job_code',
+          'directus_users.i_job_name',
+          'directus_users.i_werk',
+          'directus_users.i_id',
+          'directus_users.i_endda',
+          'directus_users.nip_new',
+          'directus_users.source',
+          'directus_users.pegawai',
+          'mt_departments.name as department_name',
+          'mt_departments.code as department_code'
+        )
+        .join(
+          'mt_departments',
+          'mt_departments.id',
+          'directus_users.department'
+        )
+        .where('directus_users.id', userId)
+        .first()
       const { submission_number, activity, data } =
         (await trx('submissions')
           .select(
@@ -2862,6 +3100,7 @@ export default class DefineEndpoint {
           data,
           reason: reason ?? 'Reject by admin',
           reject_number: reject_number + 1,
+          assignee_log: userLog,
         })
         .returning('id')
 
@@ -3140,6 +3379,38 @@ export default class DefineEndpoint {
 
     const trx = await database.transaction()
     try {
+      const userLog = await trx('directus_users')
+        .select(
+          'directus_users.id',
+          'directus_users.first_name',
+          'directus_users.last_name',
+          'directus_users.email',
+          'directus_users.avatar',
+          'directus_users.external_identifier',
+          'directus_users.full_name',
+          'directus_users.nip',
+          'directus_users.created_at',
+          'directus_users.updated_at',
+          'directus_users.i_department_code',
+          'directus_users.i_com_code',
+          'directus_users.i_job_code',
+          'directus_users.i_job_name',
+          'directus_users.i_werk',
+          'directus_users.i_id',
+          'directus_users.i_endda',
+          'directus_users.nip_new',
+          'directus_users.source',
+          'directus_users.pegawai',
+          'mt_departments.name as department_name',
+          'mt_departments.code as department_code'
+        )
+        .join(
+          'mt_departments',
+          'mt_departments.id',
+          'directus_users.department'
+        )
+        .where('directus_users.id', userId)
+        .first()
       const { submission_number, activity, data } =
         (await trx('submissions')
           .select(
@@ -3225,6 +3496,7 @@ export default class DefineEndpoint {
           data,
           reason: reason ?? 'Reject by admin',
           reject_number: reject_number + 1,
+          assignee_log: userLog,
         })
         .returning('id')
 
