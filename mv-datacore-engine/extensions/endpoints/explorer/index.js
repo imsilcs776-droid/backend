@@ -105,12 +105,44 @@ module.exports = function registerEndpoint(
       operationsSorter: 'alpha',
     })(req, res)
   })
-  router.use(
-    '/rapi-docs/assets',
-    express.static(
-      path.resolve(`${__dirname}/../../../../node_modules/rapidoc/dist`)
-    )
+  // router.use(
+  //   '/rapi-docs/assets',
+  //   express.static(
+  //     path.resolve(`${__dirname}/../../../../node_modules/rapidoc/dist`)
+  //   )
+  // )
+  // Primary directory
+  const primaryDir = path.resolve(
+    `${__dirname}/../../../../node_modules/rapidoc/dist`
   )
+  // Fallback directory
+  const fallbackDir = path.resolve(
+    `${__dirname}/../../../node_modules/rapidoc/dist`
+  )
+
+  router.use('/rapi-docs/assets', (req, res, next) => {
+    const filePath = path.join(primaryDir, req.path)
+
+    // Check if file exists in primary directory
+    fs.access(filePath, fs.constants.F_OK, (err) => {
+      if (!err) {
+        // File exists, serve it from primary directory
+        express.static(primaryDir)(req, res, next)
+      } else {
+        // File doesn't exist in primary directory, try fallback directory
+        const fallbackFilePath = path.join(fallbackDir, req.path)
+        fs.access(fallbackFilePath, fs.constants.F_OK, (err) => {
+          if (!err) {
+            // File exists in fallback directory, serve it
+            express.static(fallbackDir)(req, res, next)
+          } else {
+            // File doesn't exist in either directory, respond with 404
+            res.status(404).send('File not found')
+          }
+        })
+      }
+    })
+  })
   router.use('/rapi-docs/custom.js', (req, res) => {
     res.sendFile(path.resolve(`${__dirname}/custom.js`))
   })

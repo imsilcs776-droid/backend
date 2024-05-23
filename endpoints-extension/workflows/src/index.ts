@@ -1771,7 +1771,7 @@ export default class DefineEndpoint {
           form_actor: assignTo,
           officer: userId,
           disposer: false,
-          form_log: idLog,
+          // form_log: idLog,
           replaced,
         },
         {
@@ -1791,6 +1791,22 @@ export default class DefineEndpoint {
           .where({ id: draft_id })
           .update({ deleted_at: new Date() })
       }
+
+      // console.log({
+      //   depts_log: deptsLog,
+      //   div_log: divLog,
+      //   dir_log: dirLog,
+      //   units_log: unitsLog,
+      //   area_log: areaLog,
+      // })
+
+      // return {
+      //   depts_log: deptsLog,
+      //   div_log: divLog,
+      //   dir_log: dirLog,
+      //   units_log: unitsLog,
+      //   area_log: areaLog,
+      // }
 
       const idMeta = v4()
       await trx('document_metas').insert({
@@ -1812,11 +1828,12 @@ export default class DefineEndpoint {
         area_numbering_apply: applicableFor,
         code: 'PROBIS345',
         com_code: pegawai || 'PELINDO',
-        depts_log: deptsLog,
-        div_log: divLog,
-        dir_log: dirLog,
-        units_log: unitsLog,
-        area_log: areaLog,
+        depts_log: JSON.stringify(deptsLog),
+        div_log: JSON.stringify(divLog),
+        dir_log: JSON.stringify(dirLog),
+        units_log: JSON.stringify(unitsLog),
+        area_log: JSON.stringify(areaLog),
+        version: 2,
       })
 
       if (departments && departments.length) {
@@ -2256,15 +2273,15 @@ export default class DefineEndpoint {
         .returning('id')
 
       if (approveTo) {
-        await trx('form_assesors')
-          .update({ form_log: idLog })
-          .where('id', '=', function (qb: any) {
-            qb.select('id')
-              .from('form_assesors')
-              .where('submission', submissionId)
-              .orderBy('id', 'desc')
-              .limit(1)
-          })
+        // await trx('form_assesors')
+        //   .update({ form_log: idLog })
+        //   .where('id', '=', function (qb: any) {
+        //     qb.select('id')
+        //       .from('form_assesors')
+        //       .where('submission', submissionId)
+        //       .orderBy('id', 'desc')
+        //       .limit(1)
+        //   })
 
         await trx('form_assesors').insert({
           created_by: userId,
@@ -2303,6 +2320,11 @@ export default class DefineEndpoint {
         applicableFor,
         departments = [],
         units = [],
+        deptsLog,
+        divLog,
+        dirLog,
+        unitsLog,
+        areaLog,
       } = Object.keys(detail).reduce((acc: any, ctx: string) => {
         if (ctx === 'judul') {
           acc[ctx] = detail[ctx].value
@@ -2324,6 +2346,12 @@ export default class DefineEndpoint {
           acc.directorate = directorate?.id || null
           acc.division = division?.id || null
           acc.applicableFor = applicableFor?.id || null
+
+          acc.deptsLog = department
+          acc.divLog = division
+          acc.dirLog = directorate
+          acc.unitsLog = units
+          acc.areaLog = applicableFor
         }
         return acc
       }, {})
@@ -2344,6 +2372,11 @@ export default class DefineEndpoint {
            * contain IMS
            */
           area_numbering_apply: applicableFor,
+          depts_log: JSON.stringify(deptsLog),
+          div_log: JSON.stringify(divLog),
+          dir_log: JSON.stringify(dirLog),
+          units_log: JSON.stringify(unitsLog),
+          area_log: JSON.stringify(areaLog),
         })
         .where({ submission: submissionId })
         .returning('*')
@@ -2684,15 +2717,15 @@ export default class DefineEndpoint {
         })
         .returning('id')
 
-      await trx('form_assesors')
-        .update({ form_log: idLog })
-        .where('id', '=', function (qb: any) {
-          qb.select('id')
-            .from('form_assesors')
-            .where('submission', submissionId)
-            .orderBy('id', 'desc')
-            .limit(1)
-        })
+      // await trx('form_assesors')
+      //   .update({ form_log: idLog })
+      //   .where('id', '=', function (qb: any) {
+      //     qb.select('id')
+      //       .from('form_assesors')
+      //       .where('submission', submissionId)
+      //       .orderBy('id', 'desc')
+      //       .limit(1)
+      //   })
 
       await trx('form_assesors').insert({
         created_by: userId,
@@ -3104,15 +3137,15 @@ export default class DefineEndpoint {
         })
         .returning('id')
 
-      await trx('form_assesors')
-        .update({ form_log: idLog })
-        .where('id', '=', function (qb: any) {
-          qb.select('id')
-            .from('form_assesors')
-            .where('submission', submissionId)
-            .orderBy('id', 'desc')
-            .limit(1)
-        })
+      // await trx('form_assesors')
+      //   .update({ form_log: idLog })
+      //   .where('id', '=', function (qb: any) {
+      //     qb.select('id')
+      //       .from('form_assesors')
+      //       .where('submission', submissionId)
+      //       .orderBy('id', 'desc')
+      //       .limit(1)
+      //   })
 
       await trx('form_assesors').insert({
         created_by: userId,

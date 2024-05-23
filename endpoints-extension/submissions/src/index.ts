@@ -173,10 +173,15 @@ export default class DefineEndpoint {
     const { database } = ctx
 
     try {
-      const { id } =
+      const { id, version } =
         (await database('form_logs')
-          .select('form_logs.id')
+          .select('form_logs.id', 'document_metas.version')
           .join('statuses', 'statuses.id', 'form_logs.status')
+          .join(
+            'document_metas',
+            'document_metas.submission',
+            'form_logs.submission'
+          )
           .where('form_logs.submission', submissionId)
           .where('statuses.code', 'PUBLS')
           .first()) || {}
@@ -187,6 +192,27 @@ export default class DefineEndpoint {
           message: 'this submission not yet publish',
           data: {},
         }
+      }
+
+      if (version > 1) {
+        const createdByQuery = await database('form_logs')
+          .select(
+            'form_logs.id',
+            'statuses.name as status',
+            'form_logs.reject_number',
+            'approve_orders.order',
+            'form_logs.created_at',
+            'form_logs.assignee_log'
+          )
+          .join('statuses', 'statuses.id', 'form_logs.status')
+          .join(
+            'approve_orders',
+            'approve_orders.id',
+            'form_logs.approve_order'
+          )
+          .where('form_logs.submission', submissionId)
+          .where('approve_orders.order', 1)
+          .whereNull('approve_orders.deleted_at')
       }
 
       const createdByQuery = await database('form_logs')
@@ -500,7 +526,7 @@ export default class DefineEndpoint {
             'form_logs.created_at',
             'mt_jobs.description as i_job_title',
             database.raw(
-              `CASE 
+              `CASE
                 WHEN approve_orders.order = 1 THEN mt_departments.description
                 WHEN form_assesors.replaced IS NOT NULL THEN mt_d_rep.description ELSE mt_d_ass.description END AS department`
             ),
