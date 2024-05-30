@@ -174,15 +174,15 @@ export default class DefineEndpoint {
 
     try {
       const { id, version } =
-        (await database('form_logs')
-          .select('form_logs.id', 'document_metas.version')
-          .join('statuses', 'statuses.id', 'form_logs.status')
+        (await database('file_publishers')
+          .select('file_publishers.id', 'document_metas.version')
           .join(
             'document_metas',
             'document_metas.submission',
-            'form_logs.submission'
+            'file_publishers.submission'
           )
-          .where('form_logs.submission', submissionId)
+          .join('statuses', 'statuses.id', 'file_publishers.status')
+          .where('file_publishers.submission', submissionId)
           .where('statuses.code', 'PUBLS')
           .first()) || {}
 
@@ -213,6 +213,128 @@ export default class DefineEndpoint {
           .where('form_logs.submission', submissionId)
           .where('approve_orders.order', 1)
           .whereNull('approve_orders.deleted_at')
+          .orderBy('form_logs.created_at', 'desc')
+          .limit(1)
+
+        const higestReject = database('form_logs AS fl')
+          .max('fl.reject_number')
+          .where('fl.submission', submissionId)
+          .as('max_number_reject')
+
+        const checkedByQuery = await database('form_logs')
+          .select(
+            'form_logs.id',
+            'statuses.name as status',
+            'form_logs.reject_number',
+            'approve_orders.order',
+            'form_logs.created_at',
+            'form_logs.assignee_log'
+          )
+          .join('statuses', 'statuses.id', 'form_logs.status')
+          .join(
+            'approve_orders',
+            'approve_orders.id',
+            'form_logs.approve_order'
+          )
+          .join(
+            higestReject,
+            'max_number_reject.max',
+            'form_logs.reject_number'
+          )
+          .where('form_logs.submission', submissionId)
+          .where('approve_orders.order', 2)
+          .where('statuses.code', 'APPRD')
+          .whereNull('approve_orders.deleted_at')
+          .orderBy('form_logs.reject_number', 'desc')
+
+        const approveByQuery = await database('form_logs')
+          .select(
+            'form_logs.id',
+            'statuses.name as status',
+            'form_logs.reject_number',
+            'approve_orders.order',
+            'form_logs.created_at',
+            'form_logs.assignee_log'
+          )
+          .join('statuses', 'statuses.id', 'form_logs.status')
+          .join(
+            'approve_orders',
+            'approve_orders.id',
+            'form_logs.approve_order'
+          )
+          .where('form_logs.submission', submissionId)
+          .where('approve_orders.order', 3)
+          .whereNull('approve_orders.deleted_at')
+          .orderBy('form_logs.reject_number', 'desc')
+          .orderBy('form_logs.created_at', 'desc')
+          .limit(1)
+
+        const publisedByQuery = await database('form_logs')
+          .select(
+            'form_logs.id',
+            'statuses.name as status',
+            'form_logs.reject_number',
+            'approve_orders.order',
+            'form_logs.created_at',
+            'form_logs.assignee_log'
+          )
+          .join('statuses', 'statuses.id', 'form_logs.status')
+          .join(
+            'approve_orders',
+            'approve_orders.id',
+            'form_logs.approve_order'
+          )
+          .where('form_logs.submission', submissionId)
+          .whereNull('approve_orders.deleted_at')
+          .orderBy('form_logs.reject_number', 'desc')
+          .orderBy('form_logs.created_at', 'desc')
+          .orderBy('approve_orders.order', 'desc')
+          .limit(2)
+
+        const data = {
+          created_by: createdByQuery.map((a: any) => {
+            return {
+              ...a,
+              is_replacement: 0,
+              full_name: a.assignee_log.full_name,
+              job_title: a.assignee_log?.full_name?.split('#')[1]?.trim(),
+            }
+          }),
+          checked_by: checkedByQuery.map((a: any) => {
+            return {
+              ...a,
+              is_replacement: 0,
+              job_title: a.assignee_log?.full_name?.split('#')[1]?.trim(),
+              full_name: a.assignee_log.full_name,
+            }
+          }),
+          approved_by: approveByQuery.map((a: any) => {
+            return {
+              ...a,
+              is_replacement: 0,
+              job_title: a.assignee_log?.full_name?.split('#')[1]?.trim(),
+              full_name: a.assignee_log.full_name,
+            }
+          }),
+          published_by: publisedByQuery
+            .sort((a: any, b: any) => {
+              return a.order - b.order
+            })
+            .map((a: any) => {
+              return {
+                ...a,
+                is_replacement: 0,
+                job_title: a.assignee_log?.full_name?.split('#')[1]?.trim(),
+                full_name: a.assignee_log.full_name,
+              }
+            }),
+        }
+
+        return {
+          success: true,
+          message: 'Successfully Get Submission Officer',
+          data,
+        }
       }
 
       const createdByQuery = await database('form_logs')
