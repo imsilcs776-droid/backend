@@ -3869,6 +3869,7 @@ export default class DefineEndpoint {
       full_name,
       nip_new: nippNew,
       department: myDepartment,
+      instansi,
     } = await item.getUser({
       req,
       UsersService,
@@ -3876,24 +3877,42 @@ export default class DefineEndpoint {
     try {
       if (!nippNew) throw new Error('NIPP not found')
 
-      const bawahan = await database('peo_atasan_bawahan')
+      const atasanSisman = await database
+        .with('peo_atasan_bawahan_atas', (qb: any) => {
+          /**
+           * mencari atasan langsung
+           */
+          qb.select(
+            'peo_atasan_bawahan.kd_div_ats',
+            'peo_atasan_bawahan.kd_div',
+            'peo_atasan_bawahan.nipp_ats_baru',
+            'peo_atasan_bawahan.pegawai'
+          )
+            .from('peo_atasan_bawahan')
+            .where('peo_atasan_bawahan.nipp_baru', nippNew)
+            .orderBy('peo_atasan_bawahan.lvl', 'desc')
+            .limit(1)
+        })
         .select(
-          'peo_atasan_bawahan.kd_div as department_code',
-          'peo_atasan_bawahan.kd_div_ats as department_code_ats',
-          'peo_atasan_bawahan.pegawai',
+          'peo_atasan_bawahan_atas.kd_div_ats as department_code_ats',
+          'peo_atasan_bawahan_atas.kd_div as department_code',
+          'peo_atasan_bawahan_atas.pegawai',
           'directus_users.full_name',
-          'directus_users.id'
+          'directus_users.id',
+          'directus_users.instansi'
         )
+        .from('peo_atasan_bawahan_atas')
         .join(
           'directus_users',
           'directus_users.nip_new',
-          'peo_atasan_bawahan.nipp_baru'
+          'peo_atasan_bawahan_atas.nipp_ats_baru'
         )
         .where('directus_users.source', 'PEO')
-        .where('peo_atasan_bawahan.kd_div', 'ilike', `%SIM%`)
+        .where('directus_users.instansi', instansi)
+        .where('peo_atasan_bawahan_atas.kd_div', 'ilike', `%SIM%`)
       return {
-        data: bawahan,
-        meta: { me: { full_name, nippNew, myDepartment } },
+        data: atasanSisman,
+        meta: { me: { full_name, nippNew, myDepartment, instansi } },
         success: true,
         message: 'Successfully Get recomendation',
       }
