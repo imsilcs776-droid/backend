@@ -1732,7 +1732,7 @@ export default class DefineEndpoint {
           submission_revice,
           status: statusesId,
           repo_revice,
-          com_code: pegawai || 'PELINDO',
+          com_code: pegawai || 'PLND',
         })
         .returning('*')
 
@@ -1827,7 +1827,7 @@ export default class DefineEndpoint {
          */
         area_numbering_apply: applicableFor,
         code: 'PROBIS345',
-        com_code: pegawai || 'PELINDO',
+        com_code: pegawai || 'PLND',
         depts_log: JSON.stringify(deptsLog),
         div_log: JSON.stringify(divLog),
         dir_log: JSON.stringify(dirLog),
