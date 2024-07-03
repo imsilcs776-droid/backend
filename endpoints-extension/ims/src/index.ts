@@ -2847,7 +2847,7 @@ export default class DefineEndpoint {
       }
 
       if (instansi) {
-        ObsoleteRequest.where('document_metas.com_code', status)
+        ObsoleteRequest.where('document_metas.com_code', instansi)
         ObsoleteRepoFromProbis.where('rep_document_metas.com_code', instansi)
         ObsoleteRepo.where('repo_document_submissions.instansi', instansi)
       }
