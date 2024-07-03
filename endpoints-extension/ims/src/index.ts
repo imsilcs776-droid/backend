@@ -3569,6 +3569,19 @@ export default class DefineEndpoint {
           return acc
         }, {})
 
+        // /**
+        //  * jika hanya satu department dan tidak ada unit
+        //  */
+        // if (departmentIds.length === 1 && unitsIds.length === 0) {
+        //   const [department] = departmentIds
+        //   return {
+        //     data: atasanLangsung,
+        //     meta: { me: { full_name, nippNew, myDepartment } },
+        //     success: true,
+        //     message: 'Successfully Get recomendation',
+        //   }
+        // }
+
         const { quota, reject_number } =
           (await database('form_logs')
             .select(
@@ -3641,11 +3654,11 @@ export default class DefineEndpoint {
               myUnit,
             ]
 
-            const allUnitNotDone = unitsIds.filter(
+            const allUnitNotDone = [...unitsIds].filter(
               (e: number) => !allUnitDone.includes(e)
             )
 
-            console.log(allUnitNotDone)
+            // console.log(allUnitNotDone)
 
             /**
              * jika sudah tidak ada unit lagi yang tersisa,
@@ -3653,7 +3666,7 @@ export default class DefineEndpoint {
              */
             if (allUnitNotDone?.length === 0) {
               return {
-                data: [atasanLangsung],
+                data: atasanLangsung,
                 meta: { me: { full_name, nippNew, myDepartment } },
                 success: true,
                 message: 'Successfully Get recomendation',
@@ -3661,8 +3674,84 @@ export default class DefineEndpoint {
             }
 
             const recomendUser = await database('directus_users')
-              .select('id', 'full_name', 'department')
+              .select(
+                'id',
+                'full_name',
+                'department',
+                'i_kd_div as department_code'
+              )
               .whereIn('department', allUnitNotDone)
+              .where('directus_users.source', 'PEO')
+
+            return {
+              data: recomendUser,
+              meta: { me: { full_name, nippNew, myDepartment } },
+              success: true,
+              message: 'Successfully Get recomendation',
+            }
+          }
+
+          if (apprType.DH === approver) {
+            /**
+             * mencari unit yang sudah ada
+             */
+            const unitsDone =
+              (await database('form_logs')
+                .select('mt_departments.id')
+                .join(
+                  'directus_users',
+                  'directus_users.id',
+                  'form_logs.created_by'
+                )
+                .join(
+                  'mt_departments',
+                  'mt_departments.id',
+                  'directus_users.department'
+                )
+                .join(
+                  'approve_orders',
+                  'approve_orders.id',
+                  'form_logs.approve_order'
+                )
+                .where('directus_users.source', 'PEO')
+                .where('form_logs.submission', submissionId)
+                .where('form_logs.reject_number', reject_number)
+                .where('approve_orders.order', 2)) || []
+            // .where('directus_users.id', )
+
+            const myUnit = myDepartment
+            const allUnitDone = [
+              ...new Set(unitsDone.map((u: any) => u.id)),
+              myUnit,
+            ]
+
+            const allDeptNotDone = [...departmentIds].filter(
+              (e: number) => !allUnitDone.includes(e)
+            )
+
+            // console.log(allDeptNotDone)
+
+            /**
+             * jika sudah tidak ada unit lagi yang tersisa,
+             * maka akan mengembalikan atasan langsung
+             */
+            if (allDeptNotDone?.length === 0) {
+              return {
+                data: atasanLangsung,
+                meta: { me: { full_name, nippNew, myDepartment } },
+                success: true,
+                message: 'Successfully Get recomendation',
+              }
+            }
+
+            const recomendUser = await database('directus_users')
+              .select(
+                'id',
+                'full_name',
+                'department',
+                'i_kd_div as department_code'
+              )
+              .whereIn('department', allDeptNotDone)
               .where('directus_users.source', 'PEO')
 
             return {
