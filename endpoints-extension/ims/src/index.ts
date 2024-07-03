@@ -123,7 +123,12 @@ export default class DefineEndpoint {
 
       const businessIds =
         business_Id instanceof Array ? business_Id : [business_Id]
-      const { database } = ctx
+      const {
+        services: { UsersService },
+        database,
+      } = ctx
+
+      const { id: userId, instansi } = await item.getUser({ req, UsersService })
 
       const documentDepQuery = database('document_departments')
         .select(
@@ -215,6 +220,7 @@ export default class DefineEndpoint {
           'file_publishers.document_meta',
           'document_metas.id'
         )
+        .where('submissions.com_code', instansi)
         .whereNull('Businesses.deleted_at')
         .whereNull('statuses.deleted_at')
         .whereNull('file_publishers.deleted_at')
@@ -1614,8 +1620,8 @@ export default class DefineEndpoint {
           'status.id',
           'created_by.id',
           'created_by.avatar.filename_download',
-          'created_by.profile.email',
-          'created_by.profile.full_name',
+          'created_by.email',
+          'created_by.full_name',
           'created_by.job.name',
           'created_by.job.id',
           'approve_order.id',
@@ -1673,7 +1679,18 @@ export default class DefineEndpoint {
         )
 
         if (!assesor) {
-          formLog.origin = { ...created_by }
+          formLog.origin = {
+            avatar: null,
+            id: created_by?.id,
+            job: {
+              name: created_by?.job?.name,
+              id: created_by?.job?.id,
+            },
+            profile: {
+              email: created_by?.email,
+              full_name: created_by?.full_name,
+            },
+          }
           return formLog
         }
 
@@ -3455,6 +3472,7 @@ export default class DefineEndpoint {
         )
         .where('peo_atasan_bawahan.nipp_baru', nippNew)
         .where('directus_users.source', 'PEO')
+        .where('directus_users.is_active', true)
         .orderBy('peo_atasan_bawahan.lvl', 'desc')
 
       return {
@@ -3569,19 +3587,6 @@ export default class DefineEndpoint {
           return acc
         }, {})
 
-        // /**
-        //  * jika hanya satu department dan tidak ada unit
-        //  */
-        // if (departmentIds.length === 1 && unitsIds.length === 0) {
-        //   const [department] = departmentIds
-        //   return {
-        //     data: atasanLangsung,
-        //     meta: { me: { full_name, nippNew, myDepartment } },
-        //     success: true,
-        //     message: 'Successfully Get recomendation',
-        //   }
-        // }
-
         const { quota, reject_number } =
           (await database('form_logs')
             .select(
@@ -3681,6 +3686,7 @@ export default class DefineEndpoint {
                 'i_kd_div as department_code'
               )
               .whereIn('department', allUnitNotDone)
+              .where('directus_users.is_active', true)
               .where('directus_users.source', 'PEO')
 
             return {
@@ -3752,6 +3758,7 @@ export default class DefineEndpoint {
                 'i_kd_div as department_code'
               )
               .whereIn('department', allDeptNotDone)
+              .where('directus_users.is_active', true)
               .where('directus_users.source', 'PEO')
 
             return {
@@ -3839,6 +3846,8 @@ export default class DefineEndpoint {
           'directus_users.nip_new',
           'peo_atasan_bawahan_setara.nipp_baru'
         )
+        // .where('directus_users.instansi', instansi)
+        .where('directus_users.is_active', true)
         .where('directus_users.source', 'PEO')
 
       return {
@@ -3909,6 +3918,9 @@ export default class DefineEndpoint {
           'directus_users.nip_new',
           'peo_atasan_bawahan.nipp_baru'
         )
+        .where('directus_users.source', 'PEO')
+        // .where('directus_users.instansi', instansi)
+        .where('directus_users.is_active', true)
         .where('peo_atasan_bawahan.nipp_ats_baru', nippNew)
       return {
         data: bawahan,
@@ -3966,41 +3978,27 @@ export default class DefineEndpoint {
     try {
       if (!nippNew) throw new Error('NIPP not found')
 
-      const atasanSisman = await database
-        .with('peo_atasan_bawahan_atas', (qb: any) => {
-          /**
-           * mencari atasan langsung
-           */
-          qb.select(
-            'peo_atasan_bawahan.kd_div_ats',
-            'peo_atasan_bawahan.kd_div',
-            'peo_atasan_bawahan.nipp_ats_baru',
-            'peo_atasan_bawahan.pegawai'
-          )
-            .from('peo_atasan_bawahan')
-            .where('peo_atasan_bawahan.nipp_baru', nippNew)
-            .orderBy('peo_atasan_bawahan.lvl', 'desc')
-            .limit(1)
-        })
+      const depCodes =
+        (await database('mt_sisman_grups')
+          .select('kd_div')
+          .where('grup', instansi)) || []
+
+      const sismans = await database('directus_users')
         .select(
-          'peo_atasan_bawahan_atas.kd_div_ats as department_code_ats',
-          'peo_atasan_bawahan_atas.kd_div as department_code',
-          'peo_atasan_bawahan_atas.pegawai',
           'directus_users.full_name',
           'directus_users.id',
-          'directus_users.instansi'
-        )
-        .from('peo_atasan_bawahan_atas')
-        .join(
-          'directus_users',
-          'directus_users.nip_new',
-          'peo_atasan_bawahan_atas.nipp_ats_baru'
+          'directus_users.instansi',
+          'directus_users.pegawai'
         )
         .where('directus_users.source', 'PEO')
-        .where('directus_users.instansi', instansi)
-        .where('peo_atasan_bawahan_atas.kd_div', 'ilike', `%SIM%`)
+        // .where('directus_users.instansi', instansi)
+        .where('directus_users.is_active', true)
+        .whereIn(
+          'directus_users.i_kd_div',
+          depCodes.map((d: any) => d.kd_div)
+        )
       return {
-        data: atasanSisman,
+        data: sismans,
         meta: { me: { full_name, nippNew, myDepartment, instansi } },
         success: true,
         message: 'Successfully Get recomendation',
