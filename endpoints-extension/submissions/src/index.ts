@@ -243,7 +243,7 @@ export default class DefineEndpoint {
           )
           .where('form_logs.submission', submissionId)
           .where('approve_orders.order', 2)
-          .where('statuses.code', 'APPRD')
+          // .where('statuses.code', 'APPRD')
           .whereNull('approve_orders.deleted_at')
           .orderBy('form_logs.reject_number', 'desc')
 
