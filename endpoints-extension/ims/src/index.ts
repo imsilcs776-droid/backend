@@ -2643,6 +2643,12 @@ export default class DefineEndpoint {
           schema: { type: 'string' },
           required: false,
         },
+        {
+          in: 'query',
+          name: 'instansi',
+          schema: { type: 'string' },
+          required: false,
+        },
       ],
     }
   )
@@ -2657,7 +2663,8 @@ export default class DefineEndpoint {
     @Query('status') status: number,
     @Query('directorate') dir: number,
     @Query('werk_directorate') werkDir: number,
-    @Query('level') level: string
+    @Query('level') level: string,
+    @Query('instansi') instansi: string
   ) {
     const {
       database,
@@ -2837,6 +2844,12 @@ export default class DefineEndpoint {
       if (status) {
         ObsoleteRequest.where('statuses.id', status)
         ObsoleteRepo.where('statuses.id', status)
+      }
+
+      if (instansi) {
+        ObsoleteRequest.where('document_metas.com_code', status)
+        ObsoleteRepoFromProbis.where('rep_document_metas.com_code', instansi)
+        ObsoleteRepo.where('repo_document_submissions.instansi', instansi)
       }
 
       if (query) {
