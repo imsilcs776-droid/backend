@@ -501,7 +501,7 @@ export default class DefineEndpoint {
         .join('statuses', 'statuses.id', 'submissions.status')
         .join('form_logs', 'form_logs.id', 'submissions.current_form_log')
         .join('approve_orders', 'approve_orders.id', 'form_logs.approve_order')
-        .join('form_actors', 'approve_orders.approve_to', 'form_actors.id')
+        .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
         .join('form_assesors', function (qb: any) {
           qb.on('form_assesors.form_actor', '=', 'form_actors.id')
           qb.on('form_assesors.submission', '=', 'form_logs.submission')
@@ -1774,16 +1774,16 @@ export default class DefineEndpoint {
           // form_log: idLog,
           replaced,
         },
-        {
-          created_by: userId,
-          created_at: new Date(),
-          updated_at: new Date(),
-          submission: submissionId,
-          form_actor: approveTo,
-          officer: assignToUserId,
-          disposer: false,
-          replaced,
-        },
+        // {
+        //   created_by: userId,
+        //   created_at: new Date(),
+        //   updated_at: new Date(),
+        //   submission: submissionId,
+        //   form_actor: approveTo,
+        //   officer: assignToUserId,
+        //   disposer: false,
+        //   replaced,
+        // },
       ])
 
       if (draft_id) {
@@ -2166,11 +2166,13 @@ export default class DefineEndpoint {
         id: currentAppOrderId,
         order: currentOrder,
         approve_to: approveTo,
+        assign_to: assignTo,
       } = await trx('approve_orders')
         .select(
           'approve_orders.id',
           'approve_orders.order',
-          'approve_orders.approve_to'
+          'approve_orders.approve_to',
+          'approve_orders.assign_to'
         )
         .whereNull('approve_orders.deleted_at')
         .where('approve_orders.id', approve_order)
@@ -2273,12 +2275,22 @@ export default class DefineEndpoint {
         .returning('id')
 
       if (approveTo) {
+        // await trx('form_assesors')
+        //   .update({ form_log: idLog })
+        //   .where('id', '=', function (qb: any) {
+        //     qb.select('id')
+        //       .from('form_assesors')
+        //       .where('submission', submissionId)
+        //       .orderBy('id', 'desc')
+        //       .limit(1)
+        //   })
+
         await trx('form_assesors').insert({
           created_by: userId,
           created_at: new Date(),
           updated_at: new Date(),
           submission: submissionId,
-          form_actor: approveTo,
+          form_actor: assignTo,
           officer: dispose_to ?? assignToUserId,
           disposer: !!dispose_to,
           replaced,
