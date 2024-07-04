@@ -2182,25 +2182,52 @@ export default class DefineEndpoint {
       let nextOrder
       if (currentStatusCode === 'DISPS') {
         nextOrder = currentAppOrderId
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assignTo,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
       }
 
       /**
        * status status revised kembali ke pertama
        */
       if (currentStatusCode === 'RVSED') {
-        const { id: revisedApproveOrderId } = (await await trx('approve_orders')
-          .select('approve_orders.id')
+        const { id: revisedApproveOrderId, assign_to } = (await await trx(
+          'approve_orders'
+        )
+          .select('approve_orders.id', 'approve_orders.assign_to')
           .whereNull('approve_orders.deleted_at')
           .where('approve_orders.activity', activity)
           .where('approve_orders.order', 2)
           .first()) || {
           id: null,
         }
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assign_to,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
+
         nextOrder = revisedApproveOrderId
       }
       if (currentStatusCode === 'APPRD' || currentStatusCode === 'WAITN') {
-        const { id: approveApproveOrderId } = (await await trx('approve_orders')
-          .select('approve_orders.id')
+        const { id: approveApproveOrderId, assign_to } = (await await trx(
+          'approve_orders'
+        )
+          .select('approve_orders.id', 'approve_orders.assign_to')
           .whereNull('approve_orders.deleted_at')
           .where('approve_orders.activity', activity)
           .where('approve_orders.order', currentOrder + 1)
@@ -2208,10 +2235,25 @@ export default class DefineEndpoint {
           id: null,
         }
         nextOrder = approveApproveOrderId
+
+        console.log('assign_to', assign_to)
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assign_to,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
       }
       if (currentStatusCode === 'COMPL') {
         nextOrder = null
       }
+
+      console.log('nextOrder', nextOrder, currentStatusCode, currentOrder)
 
       /**
        * update form actor
@@ -2273,29 +2315,6 @@ export default class DefineEndpoint {
           assignee_log: userLog,
         })
         .returning('id')
-
-      if (approveTo) {
-        // await trx('form_assesors')
-        //   .update({ form_log: idLog })
-        //   .where('id', '=', function (qb: any) {
-        //     qb.select('id')
-        //       .from('form_assesors')
-        //       .where('submission', submissionId)
-        //       .orderBy('id', 'desc')
-        //       .limit(1)
-        //   })
-
-        await trx('form_assesors').insert({
-          created_by: userId,
-          created_at: new Date(),
-          updated_at: new Date(),
-          submission: submissionId,
-          form_actor: assignTo,
-          officer: dispose_to ?? assignToUserId,
-          disposer: !!dispose_to,
-          replaced,
-        })
-      }
 
       await trx('submissions')
         .where({ id: submissionId })
