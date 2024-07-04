@@ -500,7 +500,7 @@ export default class DefineEndpoint {
          */
         .join('statuses', 'statuses.id', 'submissions.status')
         .join('form_logs', 'form_logs.id', 'submissions.current_form_log')
-        .join('approve_orders', 'approve_orders.id', 'form_logs.approve_order')
+        .join('approve_orders', 'approve_orders.id', 'form_logs.next_order')
         .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
         .join('form_assesors', function (qb: any) {
           qb.on('form_assesors.form_actor', '=', 'form_actors.id')
@@ -1763,27 +1763,27 @@ export default class DefineEndpoint {
         .update({ current_form_log: idLog })
 
       await trx('form_assesors').insert([
-        {
-          created_by: userId,
-          created_at: new Date(),
-          updated_at: new Date(),
-          submission: submissionId,
-          form_actor: assignTo,
-          officer: userId,
-          disposer: false,
-          // form_log: idLog,
-          replaced,
-        },
         // {
         //   created_by: userId,
         //   created_at: new Date(),
         //   updated_at: new Date(),
         //   submission: submissionId,
-        //   form_actor: approveTo,
-        //   officer: assignToUserId,
+        //   form_actor: assignTo,
+        //   officer: userId,
         //   disposer: false,
+        //   // form_log: idLog,
         //   replaced,
         // },
+        {
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: approveTo,
+          officer: assignToUserId,
+          disposer: false,
+          replaced,
+        },
       ])
 
       if (draft_id) {
