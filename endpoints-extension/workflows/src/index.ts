@@ -2286,7 +2286,7 @@ export default class DefineEndpoint {
         })
       }
 
-      if (assignToDispose && currentStatusCode !== 'DISPS') {
+      if (assignToDispose && currentStatusCode === 'DISPS') {
         await trx('form_assesors').insert({
           created_by: userId,
           created_at: new Date(),
