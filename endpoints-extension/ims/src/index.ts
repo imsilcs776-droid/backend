@@ -4059,7 +4059,7 @@ export default class DefineEndpoint {
           name: 'company',
           schema: { type: 'string' },
           required: true,
-          example: 'PELINDO',
+          example: 'PLND',
         },
       ],
     }

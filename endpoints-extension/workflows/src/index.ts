@@ -2166,6 +2166,7 @@ export default class DefineEndpoint {
         id: currentAppOrderId,
         order: currentOrder,
         approve_to: approveTo,
+        assign_to: assignToDispose,
       } = await trx('approve_orders')
         .select(
           'approve_orders.id',
@@ -2272,23 +2273,26 @@ export default class DefineEndpoint {
         })
         .returning('id')
 
-      if (approveTo) {
-        // await trx('form_assesors')
-        //   .update({ form_log: idLog })
-        //   .where('id', '=', function (qb: any) {
-        //     qb.select('id')
-        //       .from('form_assesors')
-        //       .where('submission', submissionId)
-        //       .orderBy('id', 'desc')
-        //       .limit(1)
-        //   })
-
+      if (approveTo && currentStatusCode !== 'DISPS') {
         await trx('form_assesors').insert({
           created_by: userId,
           created_at: new Date(),
           updated_at: new Date(),
           submission: submissionId,
           form_actor: approveTo,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
+      }
+
+      if (assignToDispose && currentStatusCode !== 'DISPS') {
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assignToDispose,
           officer: dispose_to ?? assignToUserId,
           disposer: !!dispose_to,
           replaced,
