@@ -2639,7 +2639,7 @@ export default class DefineEndpoint {
       /**
        * get statuses id
        */
-      const [{ code: currentStatusCode = 'RVISI' }] = await trx('statuses')
+      const [{ code: currentStatusCode = 'REJCT' }] = await trx('statuses')
         .select('statuses.code')
         .where('statuses.id', status)
         .whereNull('statuses.deleted_at')
@@ -2667,7 +2667,16 @@ export default class DefineEndpoint {
         }
         formActor = assign_to
 
-        console.log(assign_to, revisedApproveOrderId)
+        console.log('assign_to', assign_to, revisedApproveOrderId)
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          officer: assignToUserId,
+          form_actor: assign_to,
+        })
+
         nextOrder = revisedApproveOrderId
       } else if (
         currentStatusCode === 'REJCT' &&
@@ -2747,15 +2756,6 @@ export default class DefineEndpoint {
       //       .orderBy('id', 'desc')
       //       .limit(1)
       //   })
-
-      await trx('form_assesors').insert({
-        created_by: userId,
-        created_at: new Date(),
-        updated_at: new Date(),
-        submission: submissionId,
-        officer: assignToUserId,
-        form_actor: formActor,
-      })
 
       await trx('submissions')
         .where({ id: submissionId })
