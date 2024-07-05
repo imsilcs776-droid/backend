@@ -489,34 +489,66 @@ export default class DefineEndpoint {
 
       const { id } = await item.getUser({ req, UsersService })
 
+      // const logOfficerQuery = database('submissions')
+      //   .select('submissions.id as id')
+      //   /**
+      //    * ims
+      //    */
+      //   .join('document_metas', 'document_metas.submission', 'submissions.id')
+      //   /**
+      //    *
+      //    */
+      //   .join('statuses', 'statuses.id', 'submissions.status')
+      //   .join('form_logs', 'form_logs.id', 'submissions.current_form_log')
+      //   .join('approve_orders', 'approve_orders.id', 'form_logs.next_order')
+      //   .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
+      //   .join('form_assesors', function (qb: any) {
+      //     qb.on('form_assesors.form_actor', '=', 'form_actors.id')
+      //     qb.on('form_assesors.submission', '=', 'form_logs.submission')
+      //   })
+      //   .whereNull('statuses.deleted_at')
+      //   .whereNull('approve_orders.deleted_at')
+      //   .whereNull('form_actors.deleted_at')
+      //   .whereNull('form_assesors.deleted_at')
+      //   .where('statuses.code', '<>', 'REJCT')
+      //   .where('statuses.code', '<>', 'COMPL')
+      //   .where('form_assesors.officer', id)
+      //   .where('submissions.business', business_id)
+      //   /**
+      //    * ims
+      //    */
+      //   .whereNull('document_metas.deleted_at')
+
       const logOfficerQuery = database('submissions')
         .select('submissions.id as id')
-        /**
-         * ims
-         */
         .join('document_metas', 'document_metas.submission', 'submissions.id')
-        /**
-         *
-         */
         .join('statuses', 'statuses.id', 'submissions.status')
         .join('form_logs', 'form_logs.id', 'submissions.current_form_log')
         .join('approve_orders', 'approve_orders.id', 'form_logs.next_order')
         .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
-        .join('form_assesors', function (qb: any) {
-          qb.on('form_assesors.form_actor', '=', 'form_actors.id')
-          qb.on('form_assesors.submission', '=', 'form_logs.submission')
-        })
+        .join(
+          database('form_assesors')
+            .select('*')
+            .where(
+              'id',
+              database.raw(
+                '(SELECT MAX(fa2.id) FROM form_assesors AS fa2 WHERE fa2.form_actor = form_assesors.form_actor AND fa2.submission = form_assesors.submission)'
+              )
+            )
+            .as('form_assesors_max'),
+          function (qb: any) {
+            qb.on('form_assesors_max.form_actor', '=', 'form_actors.id')
+            qb.on('form_assesors_max.submission', '=', 'form_logs.submission')
+          }
+        )
         .whereNull('statuses.deleted_at')
         .whereNull('approve_orders.deleted_at')
         .whereNull('form_actors.deleted_at')
-        .whereNull('form_assesors.deleted_at')
+        .whereNull('form_assesors_max.deleted_at')
         .where('statuses.code', '<>', 'REJCT')
         .where('statuses.code', '<>', 'COMPL')
-        .where('form_assesors.officer', id)
+        .where('form_assesors_max.officer', id)
         .where('submissions.business', business_id)
-        /**
-         * ims
-         */
         .whereNull('document_metas.deleted_at')
 
       if (search) {
