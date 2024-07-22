@@ -1687,11 +1687,11 @@ export default class DefineEndpoint {
             .first()) || {}
         reviceIdFromDraftRepo = revice?.id || ''
 
-        const revicePublish = await trx('file_publish')
-          .select('file_publish.submission')
-          .join('statuses', 'statuses.id', 'file_publish.status')
+        const revicePublish = await trx('file_publishers')
+          .select('file_publishers.submission')
+          .join('statuses', 'statuses.id', 'file_publishers.status')
           .where('statuses.code', 'PUBLS')
-          .where('file_publish.document_number', lastRevice)
+          .where('file_publishers.document_number', lastRevice)
           .first()
         reviceIdFromDraftProbis = revicePublish?.submission
       }
