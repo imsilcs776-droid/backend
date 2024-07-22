@@ -1677,14 +1677,23 @@ export default class DefineEndpoint {
       const now = new Date()
       now.setSeconds(now.getSeconds() - 30)
 
-      let reviceIdFromRepo
+      let reviceIdFromDraftRepo
+      let reviceIdFromDraftProbis
       if (isReviceFromDraft && lastRevice) {
         const revice =
           (await trx('repo_document_submissions')
             .select('id')
             .where('number', lastRevice)
             .first()) || {}
-        reviceIdFromRepo = revice?.id || ''
+        reviceIdFromDraftRepo = revice?.id || ''
+
+        const revicePublish = await trx('file_publish')
+          .select('file_publish.submission')
+          .join('statuses', 'statuses.id', 'file_publish.status')
+          .where('statuses.code', 'PUBLS')
+          .where('file_publish.document_number', lastRevice)
+          .first()
+        reviceIdFromDraftProbis = revicePublish?.submission
       }
 
       const { id: lastSubmissionId, judul: judulLastSubmission } =
@@ -1798,9 +1807,9 @@ export default class DefineEndpoint {
            * revise contain ims
            */
           revise: !!is_revice || !!isReviceFromDraft,
-          submission_revice,
+          submission_revice: submission_revice || reviceIdFromDraftProbis,
           status: statusesId,
-          repo_revice: repo_revice || reviceIdFromRepo,
+          repo_revice: repo_revice || reviceIdFromDraftRepo,
           com_code: pegawai || 'PLND',
         })
         .returning('*')
