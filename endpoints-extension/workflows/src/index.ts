@@ -1685,7 +1685,7 @@ export default class DefineEndpoint {
             .select('id')
             .where('number', lastRevice)
             .first()) || {}
-        reviceIdFromDraftRepo = revice?.id || ''
+        reviceIdFromDraftRepo = revice?.id
 
         const revicePublish = await trx('file_publishers')
           .select('file_publishers.submission')
