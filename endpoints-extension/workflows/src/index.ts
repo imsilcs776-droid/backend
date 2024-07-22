@@ -1625,12 +1625,28 @@ export default class DefineEndpoint {
         dirLog,
         unitsLog,
         areaLog,
+        isReviceFromDraft = false,
+        lastRevice,
       } = Object.keys(detail).reduce((acc: any, ctx: string) => {
         if (ctx === 'judul') {
           acc[ctx] = detail[ctx].value
         }
         if (ctx.toLowerCase().includes('deskripsi')) {
           acc['description'] = detail[ctx].value
+        }
+
+        if (ctx.toLowerCase().includes('evaluasi_dan_riwayat_perubahan')) {
+          const reviceHistories = detail[ctx].value || []
+          acc.isReviceFromDraft = reviceHistories.length > 0
+          acc.lastRevice = reviceHistories
+            .map((revice: any) => {
+              const getDocNum =
+                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+              const [text, docNum] = getDocNum
+              return docNum
+            })
+            .filter(Boolean) // Filter out undefined or null values
+            .pop() // Get the last document number
         }
         if (ctx === 'penomoran_dokumen') {
           const {
@@ -1660,6 +1676,16 @@ export default class DefineEndpoint {
 
       const now = new Date()
       now.setSeconds(now.getSeconds() - 30)
+
+      let reviceIdFromRepo
+      if (isReviceFromDraft && lastRevice) {
+        const revice =
+          (await trx('repo_document_submissions')
+            .select('id')
+            .where('number', lastRevice)
+            .first()) || {}
+        reviceIdFromRepo = revice?.id || ''
+      }
 
       const { id: lastSubmissionId, judul: judulLastSubmission } =
         (await trx('submissions')
@@ -1771,10 +1797,10 @@ export default class DefineEndpoint {
            * WARNING
            * revise contain ims
            */
-          revise: Boolean(Number(is_revice || 0)),
+          revise: !!is_revice || !!isReviceFromDraft,
           submission_revice,
           status: statusesId,
-          repo_revice,
+          repo_revice: repo_revice || reviceIdFromRepo,
           com_code: pegawai || 'PLND',
         })
         .returning('*')
