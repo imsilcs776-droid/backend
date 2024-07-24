@@ -1643,7 +1643,7 @@ export default class DefineEndpoint {
               const getDocNum =
                 revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
               const [text, docNum] = getDocNum
-              return docNum
+              return docNum?.trim()
             })
             .filter(Boolean) // Filter out undefined or null values
             .pop() // Get the last document number
@@ -1687,12 +1687,13 @@ export default class DefineEndpoint {
             .first()) || {}
         reviceIdFromDraftRepo = revice?.id
 
-        const revicePublish = await trx('file_publishers')
-          .select('file_publishers.submission')
-          .join('statuses', 'statuses.id', 'file_publishers.status')
-          .where('statuses.code', 'PUBLS')
-          .where('file_publishers.document_number', lastRevice)
-          .first()
+        const revicePublish =
+          (await trx('file_publishers')
+            .select('file_publishers.submission')
+            .join('statuses', 'statuses.id', 'file_publishers.status')
+            .where('statuses.code', 'PUBLS')
+            .where('file_publishers.document_number', lastRevice)
+            .first()) || {}
         reviceIdFromDraftProbis = revicePublish?.submission
       }
 
