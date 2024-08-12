@@ -1074,6 +1074,24 @@ export default class DefineEndpoint {
       }
 
       if (countType.IK === usedTo) {
+        console.log('DISINI', procedure_number, dirDiv)
+        if (procedure_number === undefined) {
+          return {
+            success: false,
+            message: 'procedure_number is required when IK',
+            data: {
+              document_number_old: '00',
+              document_number: `${dirDiv}/PD.${format2dgt(
+                0
+              )}.00.00/${format2dgt(null)}`,
+              pd: format2dgt(0),
+              ik: format2dgt(0),
+              fm: format2dgt(0),
+              revision: format2dgt(0),
+            },
+          }
+        }
+
         countQuery = database('file_publishers')
           .max('file_publishers.ik_number', {
             as: 'max_count',
@@ -1085,7 +1103,7 @@ export default class DefineEndpoint {
           .where('file_publishers.document_number', 'like', div + '%')
           .where('file_publishers.procedure_number', procedure_number)
 
-        console.log('DISINI', procedure_number, dirDiv, countQuery.toString())
+        // console.log('DISINI', procedure_number, dirDiv, countQuery.toString())
 
         repoCountQuery = database('repo_document_submissions')
           .max('repo_document_submissions.number_in_ik', {
@@ -1232,6 +1250,22 @@ export default class DefineEndpoint {
       }
 
       if (countType.FORMULIR === usedTo) {
+        if (procedure_number === undefined || ik_number === undefined) {
+          return {
+            success: false,
+            message: 'procedure_number and ik_number is required when FORMULIR',
+            data: {
+              document_number_old: '00',
+              document_number: `${dirDiv}/PD.${format2dgt(
+                0
+              )}.00.00/${format2dgt(null)}`,
+              pd: format2dgt(0),
+              ik: format2dgt(0),
+              fm: format2dgt(0),
+              revision: format2dgt(0),
+            },
+          }
+        }
         countQuery = database('file_publishers')
           .max('file_publishers.ik_number', {
             as: 'max_count',
@@ -1398,6 +1432,22 @@ export default class DefineEndpoint {
       }
 
       if (countType.FORMULIR === usedTo && !ik_number) {
+        if (procedure_number === undefined) {
+          return {
+            success: false,
+            message: 'procedure_number and ik_number is required when FORMULIR',
+            data: {
+              document_number_old: '00',
+              document_number: `${dirDiv}/PD.${format2dgt(
+                0
+              )}.00.00/${format2dgt(null)}`,
+              pd: format2dgt(0),
+              ik: format2dgt(0),
+              fm: format2dgt(0),
+              revision: format2dgt(0),
+            },
+          }
+        }
         countQuery = database('file_publishers')
           .max('file_publishers.ik_number', {
             as: 'max_count',
