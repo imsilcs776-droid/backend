@@ -373,6 +373,23 @@ export default class DefineEndpoint {
         .where('fl.submission', submissionId)
         .as('max_number_reject')
 
+      const assesorLatestSubQuery = database
+        .select('*')
+        .from(
+          database('form_assesors')
+            .select(
+              'form_assesors.*',
+              database.raw(
+                'ROW_NUMBER() OVER (PARTITION BY ??, ?? ORDER BY ?? DESC) as row_num',
+                ['form_actor', 'submission', 'created_at'] // Assuming `created_at` is the correct column to order by
+              )
+            )
+            .where('form_assesors.submission', submissionId) // Filter by submissionId in the subquery
+            .as('fa')
+        )
+        .where('row_num', 1) // Filter to keep only the first row (latest)
+        .as('ffa')
+
       const checkedByQuery = await database('form_logs')
         .select(
           'form_logs.id',
@@ -382,32 +399,24 @@ export default class DefineEndpoint {
           'form_logs.created_at',
           // 'document_logs.job_title',
           database.raw(
-            'CASE WHEN form_assesors.replaced IS NOT NULL THEN user_rep.i_job_name ELSE user_ass.i_job_name END AS job_title'
+            'CASE WHEN ffa.replaced IS NOT NULL THEN user_rep.i_job_name ELSE user_ass.i_job_name END AS job_title'
           ),
           database.raw(
-            "CASE WHEN form_assesors.replaced IS NOT NULL THEN CAST('1' AS INTEGER) ELSE CAST('0' AS INTEGER) END AS is_replacement"
+            "CASE WHEN ffa.replaced IS NOT NULL THEN CAST('1' AS INTEGER) ELSE CAST('0' AS INTEGER) END AS is_replacement"
           ),
           database.raw(
-            'CASE WHEN form_assesors.replaced IS NOT NULL THEN user_rep.full_name ELSE user_ass.full_name END AS officer'
+            'CASE WHEN ffa.replaced IS NOT NULL THEN user_rep.full_name ELSE user_ass.full_name END AS officer'
           )
         )
         .join('statuses', 'statuses.id', 'form_logs.status')
         .join('approve_orders', 'approve_orders.id', 'form_logs.approve_order')
         .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
-        .join('form_assesors', function (qb: any) {
-          qb.on('form_assesors.form_actor', '=', 'form_actors.id')
-          qb.on('form_assesors.submission', '=', 'form_logs.submission')
+        .join(assesorLatestSubQuery, function (qb: any) {
+          qb.on('ffa.form_actor', '=', 'form_actors.id')
+          qb.on('ffa.submission', '=', 'form_logs.submission')
         })
-        .leftJoin(
-          'directus_users as user_ass',
-          'user_ass.id',
-          'form_assesors.officer'
-        )
-        .leftJoin(
-          'directus_users as user_rep',
-          'user_rep.id',
-          'form_assesors.replaced'
-        )
+        .leftJoin('directus_users as user_ass', 'user_ass.id', 'ffa.officer')
+        .leftJoin('directus_users as user_rep', 'user_rep.id', 'ffa.replaced')
         .join('document_logs', 'document_logs.form_log', 'form_logs.id')
         .join(higestReject, 'max_number_reject.max', 'form_logs.reject_number')
         .where('form_logs.submission', submissionId)
@@ -415,7 +424,7 @@ export default class DefineEndpoint {
         .where('statuses.code', 'APPRD')
         .whereNull('approve_orders.deleted_at')
         .whereNull('form_actors.deleted_at')
-        .whereNull('form_assesors.deleted_at')
+        .whereNull('ffa.deleted_at')
         .orderBy('form_logs.reject_number', 'desc')
 
       const approveByQuery = await database('form_logs')
