@@ -172,6 +172,16 @@ export default class DefineEndpoint {
   ) {
     const { database } = ctx
 
+    const distinctById = (items: any[]): any[] => {
+      const uniqueItems = new Map<number, any>()
+      items.forEach((item) => {
+        if (!uniqueItems.has(item?.officer)) {
+          uniqueItems.set(item?.officer, item)
+        }
+      })
+      return Array.from(uniqueItems.values())
+    }
+
     try {
       const { id, version } =
         (await database('file_publishers')
@@ -380,8 +390,8 @@ export default class DefineEndpoint {
             .select(
               'form_assesors.*',
               database.raw(
-                'ROW_NUMBER() OVER (PARTITION BY ??, ?? ORDER BY ?? DESC) as row_num',
-                ['form_actor', 'submission', 'created_at'] // Assuming `created_at` is the correct column to order by
+                'ROW_NUMBER() OVER (PARTITION BY ??,?? ORDER BY ?? DESC) as row_num',
+                ['form_actor', 'officer', 'created_at'] // Assuming `created_at` is the correct column to order by
               )
             )
             .where('form_assesors.submission', submissionId) // Filter by submissionId in the subquery
@@ -519,7 +529,7 @@ export default class DefineEndpoint {
 
       const data = {
         created_by: createdByQuery,
-        checked_by: checkedByQuery,
+        checked_by: distinctById(checkedByQuery),
         approved_by: approveByQuery,
         published_by: publisedByQuery.sort((a: any, b: any) => {
           return a.order - b.order
@@ -531,6 +541,7 @@ export default class DefineEndpoint {
         success: true,
         message: 'Successfully Get Submission Officer',
         data,
+        checkedByQuery,
       }
     } catch (error: any) {
       console.log(error)
