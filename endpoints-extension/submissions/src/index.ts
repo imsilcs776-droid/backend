@@ -407,6 +407,7 @@ export default class DefineEndpoint {
           'form_logs.reject_number',
           'approve_orders.order',
           'form_logs.created_at',
+          'ffa.id as form_assesor_id',
           // 'document_logs.job_title',
           database.raw(
             'CASE WHEN ffa.replaced IS NOT NULL THEN user_rep.i_job_name ELSE user_ass.i_job_name END AS job_title'
@@ -529,7 +530,7 @@ export default class DefineEndpoint {
 
       const data = {
         created_by: createdByQuery,
-        checked_by: distinctById(checkedByQuery),
+        checked_by: distinctById(checkedByQuery).sort((a, b) => a.form_assesor_id - b.form_assesor_id),
         approved_by: approveByQuery,
         published_by: publisedByQuery.sort((a: any, b: any) => {
           return a.order - b.order
