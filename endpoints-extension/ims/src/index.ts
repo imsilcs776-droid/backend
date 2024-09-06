@@ -1851,6 +1851,42 @@ export default class DefineEndpoint {
     @Param('submission_id') submissionId: number,
     @Context() ctx: any
   ) {
+    /**
+     * change document number from repo revice into new version
+     */
+    function parseDocumentNumber(docNumber: any) {
+      try {
+        // Split by '/' to separate sections
+        const sections = docNumber.split('/')
+
+        // Split the third section by '.' to extract DD, XX, ZZ, and CC
+        const [procedure_code, procedure_number, ik_number, formulir_number] =
+          sections[2].split('.')
+
+        // Get revision number from the last section and increment it
+        let revision_number = parseInt(sections[3].split('-')[0], 10) + 1
+
+        // Extract the year from the original document number
+        // const year = sections[3].split('-')[1]
+        const year = new Date().getFullYear()
+
+        // Update the document number with the incremented revision number and dynamic year
+        const updatedDocumentNumber = `${sections[0]}/${sections[1]}/${
+          sections[2]
+        }/${revision_number.toString().padStart(2, '0')}-${year}`
+
+        return {
+          document_number: updatedDocumentNumber, // Updated document number
+          formulir_number: parseInt(formulir_number, 10), // CC (converted to number)
+          procedure_number: parseInt(procedure_number, 10), // XX (converted to number)
+          ik_number: parseInt(ik_number, 10), // ZZ (converted to number)
+          revision_number: revision_number, // Incremented VV
+        }
+      } catch (error) {
+        throw new Error('Invalid document number format')
+      }
+    }
+
     enum Advent_type {
       PROBIS = 'PROBIS',
       REPO = 'REPO',
@@ -1867,6 +1903,30 @@ export default class DefineEndpoint {
     const trx = await database.transaction()
 
     try {
+      const { number } = await trx('submissions')
+        .select(
+          'repo_document_submissions.number'
+          // trx.raw(`
+          //   CASE
+          //     WHEN r.number IS NOT NULL THEN r.number
+          //     WHEN s.document_number IS NOT NULL THEN s.document_number
+          //     ELSE NULL
+          //   END AS number
+          // `)
+        )
+        // .join('submissions as s', 'submissions.submission_revice', 's.id')
+        .join(
+          'repo_document_submissions',
+          'submissions.repo_revice',
+          'repo_document_submissions.id'
+        )
+        .where('submissions.id', submissionId)
+        .first()
+
+      let revicePubliser = {}
+      if (number) {
+        revicePubliser = parseDocumentNumber(number)
+      }
       /**
        * get statuses id
        */
@@ -1927,6 +1987,7 @@ export default class DefineEndpoint {
       await trx('file_publishers').insert({
         id: idFilePubliser,
         ...file_publisher,
+        ...revicePubliser,
         submission: submissionId,
         created_at: new Date(),
         created_by: userId,
