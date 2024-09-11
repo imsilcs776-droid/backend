@@ -859,6 +859,46 @@ export default class DefineEndpoint {
     @Query('is_revice') isRevice: number,
     @Context() ctx: any
   ) {
+    /**
+     * change document number from repo revice into new version
+     */
+    function parseDocumentNumber(docNumber: any) {
+      try {
+        // Split by '/' to separate sections
+        const sections = docNumber.split('/')
+        const [dir, div, area] = docNumber.split('/')
+
+        // Split the third section by '.' to extract DD, XX, ZZ, and CC
+        const [procedure_code, procedure_number, ik_number, formulir_number] =
+          sections[2].split('.')
+
+        // Get revision number from the last section and increment it
+        let revision_number = parseInt(sections[3].split('-')[0], 10) + 1
+
+        // Extract the year from the original document number
+        // const year = sections[3].split('-')[1]
+        const year = new Date().getFullYear()
+
+        // Update the document number with the incremented revision number and dynamic year
+        const updatedDocumentNumber = `${sections[0]}/${sections[1]}/${
+          sections[2]
+        }/${revision_number.toString().padStart(2, '0')}-${year}`
+
+        return {
+          document_number: updatedDocumentNumber, // Updated document number
+          formulir_number: parseInt(formulir_number, 10), // CC (converted to number)
+          procedure_number: parseInt(procedure_number, 10), // XX (converted to number)
+          ik_number: parseInt(ik_number, 10), // ZZ (converted to number)
+          revision_number: revision_number, // Incremented VV
+          directorate_code: dir, // Directorate code
+          division_code: div, // Division code
+          area_code: area, // Department code
+        }
+      } catch (error) {
+        throw new Error('Invalid document number format')
+      }
+    }
+
     if (!submissionId) {
       throw new Error('Submission is required')
     }
@@ -958,7 +998,6 @@ export default class DefineEndpoint {
           revision,
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
-        console.log(divisionSub, division)
 
         documentnumberOld = `${division.code}/${
           applicableFor?.code || 'PI0'
@@ -1151,6 +1190,67 @@ export default class DefineEndpoint {
           }
         }
 
+        const isHaveOld = submissionData?.detail?.penomoran_dokumen?.value?.old
+
+        /**
+         * Fix case document number tidak standard
+         */
+        if (!isHaveOld) {
+          const riwayats =
+            submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+          const docNum = riwayats
+            .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
+            .map((revice: any) => {
+              const getDocNum =
+                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+              const [text, docNum] = getDocNum
+              return docNum?.trim()
+            })
+            .filter(Boolean) // Filter out undefined or null values
+            .pop() // Get the last document number
+
+          const dataDoc = parseDocumentNumber(docNum)
+
+          /**
+           * revisi repo
+           * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+           *
+           * @old
+           * SPGI/PI0/PD.09.01.00/01
+           * @new
+           * SPGI/PI0/PD.09.01.00/02
+           */
+          const { maxRevision } = (await database('file_publishers')
+            .max('file_publishers.ik_number', {
+              as: 'maxRevision',
+            })
+            .join('submissions', 'submissions.id', 'file_publishers.submission')
+            .whereNull('file_publishers.deleted_at')
+            .where('submissions.business', business_id)
+            .where('file_publishers.procedure_number', dataDoc.procedure_number)
+            .where('file_publishers.ik_number', dataDoc.ik_number)
+            .where('file_publishers.document_number', 'like', '%IK%')
+            .where('file_publishers.document_number', 'like', div + '%')
+            .first()) || { maxRevision: 0 }
+
+          return {
+            success: true,
+            message: 'Successfully',
+            data: {
+              document_number_old: docNum,
+              document_number: `${dirDiv}/IK.${format2dgt(
+                dataDoc.procedure_number
+              )}.${format2dgt(dataDoc.ik_number)}.00/${format2dgt(
+                maxRevision + 1
+              )}`,
+              pd: format2dgt(dataDoc.procedure_number),
+              ik: format2dgt(dataDoc.ik_number),
+              fm: format2dgt(null),
+              revision: format2dgt(maxRevision + 1),
+            },
+          }
+        }
+
         const {
           division,
           numberProbis,
@@ -1160,7 +1260,6 @@ export default class DefineEndpoint {
           revision,
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
-        console.log(divisionSub, division)
 
         documentnumberOld = `${division.code}/${
           applicableFor?.code || 'PI0'
