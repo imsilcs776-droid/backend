@@ -880,9 +880,8 @@ export default class DefineEndpoint {
         const year = new Date().getFullYear()
 
         // Update the document number with the incremented revision number and dynamic year
-        const updatedDocumentNumber = `${sections[0]}/${sections[1]}/${
-          sections[2]
-        }/${revision_number.toString().padStart(2, '0')}-${year}`
+        const updatedDocumentNumber = `${sections[0]}/${sections[1]}/${sections[2]
+          }/${revision_number.toString().padStart(2, '0')}-${year}`
 
         return {
           document_number: updatedDocumentNumber, // Updated document number
@@ -999,11 +998,10 @@ export default class DefineEndpoint {
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
 
-        documentnumberOld = `${division.code}/${
-          applicableFor?.code || 'PI0'
-        }/PD.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
-          numberForm
-        )}/${format2dgt(revision)}-${year}`
+        documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
+          }/PD.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
+            numberForm
+          )}/${format2dgt(revision)}-${year}`
 
         if (isRevice && division?.code !== divisionSub?.code) {
           /**
@@ -1179,9 +1177,8 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${
-                highestNumber + 1
-              }.00/${format2dgt(null)}`,
+              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumber + 1
+                }.00/${format2dgt(null)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(highestNumber + 1),
               fm: format2dgt(null),
@@ -1261,11 +1258,10 @@ export default class DefineEndpoint {
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
 
-        documentnumberOld = `${division.code}/${
-          applicableFor?.code || 'PI0'
-        }/PD.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
-          numberForm
-        )}/${format2dgt(revision)}-${year}`
+        documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
+          }/PD.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
+            numberForm
+          )}/${format2dgt(revision)}-${year}`
 
         if (isRevice && !isRepo) {
           /**
@@ -1436,11 +1432,10 @@ export default class DefineEndpoint {
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
         console.log(divisionSub, division)
 
-        documentnumberOld = `${division.code}/${
-          applicableFor?.code || 'PI0'
-        }/FM.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
-          numberForm
-        )}/${format2dgt(revision)}-${year}`
+        documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
+          }/FM.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
+            numberForm
+          )}/${format2dgt(revision)}-${year}`
 
         if (isRevice && !isRepo) {
           /**
@@ -1618,11 +1613,10 @@ export default class DefineEndpoint {
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
         console.log(divisionSub, division)
 
-        documentnumberOld = `${division.code}/${
-          applicableFor?.code || 'PI0'
-        }/FM.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
-          numberForm
-        )}/${format2dgt(revision)}-${year}`
+        documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
+          }/FM.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
+            numberForm
+          )}/${format2dgt(revision)}-${year}`
 
         if (isRevice && !isRepo) {
           /**
@@ -1970,9 +1964,8 @@ export default class DefineEndpoint {
         const year = new Date().getFullYear()
 
         // Update the document number with the incremented revision number and dynamic year
-        const updatedDocumentNumber = `${sections[0]}/${sections[1]}/${
-          sections[2]
-        }/${revision_number.toString().padStart(2, '0')}-${year}`
+        const updatedDocumentNumber = `${sections[0]}/${sections[1]}/${sections[2]
+          }/${revision_number.toString().padStart(2, '0')}-${year}`
 
         return {
           document_number: updatedDocumentNumber, // Updated document number
@@ -2002,6 +1995,58 @@ export default class DefineEndpoint {
     const trx = await database.transaction()
 
     try {
+      const { document_number: dtdn } = file_publisher || { document_number: null }
+      const { detail: detailData } = data || { detail: null }
+
+      const {
+        applicableFor: dtApplicableFor,
+        departments: dtDepartments,
+        directorate: dtDirectorate,
+        division: dtDivision,
+      } = Object.keys(detailData).reduce((acc: any, ctx: string) => {
+        if (ctx === 'penomoran_dokumen') {
+          const {
+            department = [],
+            directorate,
+            division,
+            applicableFor,
+          } = detailData[ctx].value || {}
+
+          acc.departments = department.map((dep: any) => dep.id)
+          acc.directorate = directorate?.id || null
+          acc.division = division?.id || null
+          acc.applicableFor = applicableFor?.code || null
+        }
+        return acc
+      }, {})
+
+      console.log({
+        applicableFor: dtApplicableFor,
+        departments: dtDepartments,
+        directorate: dtDirectorate,
+        division: dtDivision,
+      })
+
+      if (!dtdn) {
+        throw new Error('Penomoran belum lengkap: nomor dokumen tidak ada');
+      }
+
+      if (!dtApplicableFor) {
+        throw new Error('Penomoran belum lengkap: area tidak ada');
+      }
+
+      if (!dtDepartments.length) {
+        throw new Error('Penomoran belum lengkap: departemen tidak ada');
+      }
+
+      if (!dtDirectorate) {
+        throw new Error('Penomoran belum lengkap: direktorat tidak ada');
+      }
+
+      if (!dtDivision) {
+        throw new Error('Penomoran belum lengkap: divisi tidak ada');
+      }
+
       const { number } = await trx('submissions')
         .select(
           'repo_document_submissions.number'
@@ -2020,7 +2065,7 @@ export default class DefineEndpoint {
           'repo_document_submissions.id'
         )
         .where('submissions.id', submissionId)
-        .first()
+        .first() || { number: null }
 
       let revicePubliser = {}
       if (number) {
