@@ -2047,30 +2047,30 @@ export default class DefineEndpoint {
         throw new Error('Penomoran belum lengkap: divisi tidak ada');
       }
 
-      const { number } = await trx('submissions')
-        .select(
-          'repo_document_submissions.number'
-          // trx.raw(`
-          //   CASE
-          //     WHEN r.number IS NOT NULL THEN r.number
-          //     WHEN s.document_number IS NOT NULL THEN s.document_number
-          //     ELSE NULL
-          //   END AS number
-          // `)
-        )
-        // .join('submissions as s', 'submissions.submission_revice', 's.id')
-        .join(
-          'repo_document_submissions',
-          'submissions.repo_revice',
-          'repo_document_submissions.id'
-        )
-        .where('submissions.id', submissionId)
-        .first() || { number: null }
+      // const { number } = await trx('submissions')
+      //   .select(
+      //     'repo_document_submissions.number'
+      //     // trx.raw(`
+      //     //   CASE
+      //     //     WHEN r.number IS NOT NULL THEN r.number
+      //     //     WHEN s.document_number IS NOT NULL THEN s.document_number
+      //     //     ELSE NULL
+      //     //   END AS number
+      //     // `)
+      //   )
+      //   // .join('submissions as s', 'submissions.submission_revice', 's.id')
+      //   .join(
+      //     'repo_document_submissions',
+      //     'submissions.repo_revice',
+      //     'repo_document_submissions.id'
+      //   )
+      //   .where('submissions.id', submissionId)
+      //   .first() || { number: null }
 
-      let revicePubliser = {}
-      if (number) {
-        revicePubliser = parseDocumentNumber(number)
-      }
+      // let revicePubliser = {}
+      // if (number) {
+      //   revicePubliser = parseDocumentNumber(number)
+      // }
       /**
        * get statuses id
        */
@@ -2131,7 +2131,7 @@ export default class DefineEndpoint {
       await trx('file_publishers').insert({
         id: idFilePubliser,
         ...file_publisher,
-        ...revicePubliser,
+        // ...revicePubliser,
         submission: submissionId,
         created_at: new Date(),
         created_by: userId,

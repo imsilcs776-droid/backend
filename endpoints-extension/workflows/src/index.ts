@@ -3172,8 +3172,8 @@ export default class DefineEndpoint {
         .where('approve_orders.order', 1)
         .orderBy('form_logs.created_at', 'asc')
         .first()) || {
-        id: null,
-      }
+          id: null,
+        }
       const formActor = assign_to
       const nextOrder = revisedApproveOrderId
 
