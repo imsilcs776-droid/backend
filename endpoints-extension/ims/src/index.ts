@@ -2942,8 +2942,8 @@ export default class DefineEndpoint {
           'document_metas.department_directorat as directorate',
           'mt_departments.i_com_code as werk_directorate',
           database.raw('CAST(document_metas.level AS varchar) as level'),
+          'rep_file_publishers.document_number as replacement_document_number',
           'rep_document_metas.judul as replacement_title',
-          'rep_file_publishers.document_number as replacement_document_number'
         )
         .join(
           'directus_users',
@@ -2990,7 +2990,6 @@ export default class DefineEndpoint {
       const ObsoleteRepoFromProbis = database('document_obsoletes')
         .select(
           'statuses.name as status_name',
-          'directus_users.full_name as approved_by',
           'directus_users.full_name',
           'document_obsoletes.reason_obsolete as reason',
           'document_obsoletes.created_at',
@@ -3001,8 +3000,9 @@ export default class DefineEndpoint {
           // 'mt_departments.i_com_code as werk_directorate',
           database.raw('CAST(NULL AS varchar) as werk_directorate'),
           database.raw('CAST(repo_type.name_type AS varchar) as level'),
+          'rep_file_publishers.document_number as replacement_document_number',
           'rep_document_metas.judul as replacement_title',
-          'rep_file_publishers.document_number as replacement_document_number'
+          'directus_users.full_name as approved_by',
         )
         .join(
           'directus_users',
@@ -3036,7 +3036,6 @@ export default class DefineEndpoint {
       const ObsoleteRepo = database('repo_obsolete_submissions')
         .select(
           'statuses.name as status_name',
-          'user_asgns.full_name as approved_by',
           'directus_users.full_name',
           'repo_obsolete_submissions.reason',
           'repo_obsolete_submissions.created_at',
@@ -3047,7 +3046,8 @@ export default class DefineEndpoint {
           'mt_departments.i_com_code as werk_directorate',
           'repo_type.name_type as level',
           'rep_repo_document_submissions.number as replacement_document_number',
-          'rep_repo_document_submissions.title as replacement_title'
+          'rep_repo_document_submissions.title as replacement_title',
+          'user_asgns.full_name as approved_by',
         )
         .join(
           'directus_users',
@@ -3129,19 +3129,23 @@ export default class DefineEndpoint {
       }
 
       if (adventType === 'REPO') {
-        ObsoleteRequest.select('user_pubs.full_name as approved_by');
-        ObsoleteRequest.unionAll(ObsoleteRepo)
+        ObsoleteRequest
+          .select('user_pubs.full_name as approved_by')
+          .unionAll(ObsoleteRepo)
           .unionAll(ObsoleteRepoFromProbis)
           .where('advent_type', adventType)
       } else if (adventType === 'PROBIS') {
-        ObsoleteRequest.select('user_pubs.full_name as approved_by');
-        ObsoleteRequest.where('document_obsoletes.advent_type', adventType)
+        ObsoleteRequest
+          .select('user_pubs.full_name as approved_by')
+          .where('document_obsoletes.advent_type', adventType)
       } else if (adventType === 'REQUEST') {
-        ObsoleteRequest.select('user_appr.full_name as approved_by');
-        ObsoleteRequest.where('document_obsoletes.advent_type', adventType)
+        ObsoleteRequest
+          .select('user_appr.full_name as approved_by')
+          .where('document_obsoletes.advent_type', adventType)
       } else {
-        ObsoleteRequest.select('user_pubs.full_name as approved_by');
-        ObsoleteRequest.unionAll(ObsoleteRepo)
+        ObsoleteRequest
+          .select('user_pubs.full_name as approved_by')
+          .unionAll(ObsoleteRepo)
       }
 
       const { count } =
