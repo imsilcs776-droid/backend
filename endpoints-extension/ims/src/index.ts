@@ -1362,7 +1362,7 @@ export default class DefineEndpoint {
           }
         }
         countQuery = database('file_publishers')
-          .max('file_publishers.ik_number', {
+          .max('file_publishers.formulir_number', {
             as: 'max_count',
           })
           .join('submissions', 'submissions.id', 'file_publishers.submission')
@@ -1374,7 +1374,7 @@ export default class DefineEndpoint {
           .where('file_publishers.ik_number', ik_number)
 
         repoCountQuery = database('repo_document_submissions')
-          .max('repo_document_submissions.number_in_ik', {
+          .max('repo_document_submissions.number_in_fm', {
             as: 'max_count_repo',
           })
           .where('repo_document_submissions.number', 'like', '%FM%')
@@ -1543,7 +1543,7 @@ export default class DefineEndpoint {
           }
         }
         countQuery = database('file_publishers')
-          .max('file_publishers.ik_number', {
+          .max('file_publishers.formulir_number', {
             as: 'max_count',
           })
           .join('submissions', 'submissions.id', 'file_publishers.submission')
@@ -1555,7 +1555,7 @@ export default class DefineEndpoint {
           .where('file_publishers.ik_number', 0)
 
         repoCountQuery = database('repo_document_submissions')
-          .max('repo_document_submissions.number_in_ik', {
+          .max('repo_document_submissions.number_in_fm', {
             as: 'max_count_repo',
           })
           .where('repo_document_submissions.number', 'like', '%FM%')
