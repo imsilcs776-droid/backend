@@ -39,20 +39,50 @@ module.exports = function defineHook(
        */
       if (type === 'assessment') {
         try {
-          await mailService.send({
-            to: email,
-            subject,
-            text: subject,
-            template: {
-              name: 'email-assessment',
-              data: {
-                email: emailFrom,
-                full_name,
-                url: env.NOTIFICATION_URL + '/#/document-review',
+          const { full_name: fn } =
+            (await database('directus_users')
+              .where({ email: email })
+              .first()) || {}
+
+          // await mailService.send({
+          //   to: email,
+          //   subject,
+          //   text: subject,
+          //   template: {
+          //     name: 'email-assessment',
+          //     data: {
+          //       email: emailFrom,
+          //       full_name,
+          //       full_name_to: fn,
+          //       url: env.NOTIFICATION_URL + '/#/document-review',
+          //     },
+          //   },
+          // })
+
+          const response = await axios.post(
+            'http://nodered:1880/node-email',
+            {
+              to: email,
+              subject: subject,
+              text: subject,
+              template: {
+                name: 'email-assessment',
+                data: {
+                  email: emailFrom,
+                  full_name: full_name,
+                  full_name_to: fn,
+                  url: process.env.NOTIFICATION_URL + '/#/document-review',
+                },
               },
             },
-          })
-          console.log('email-assessment sent')
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          )
+
+          console.log(response)
         } catch (error) {
           console.error(error)
           throw new ServiceUnavailableException(error)
@@ -67,20 +97,43 @@ module.exports = function defineHook(
               .where({ email: email })
               .first()) || {}
 
-          await mailService.send({
-            to: email,
-            subject,
-            text: subject,
-            template: {
-              name: 'email-notification',
-              data: {
-                message,
-                full_name: fn,
-                url: env.NOTIFICATION_URL + '/#' + url,
+          // await mailService.send({
+          //   to: email,
+          //   subject,
+          //   text: subject,
+          //   template: {
+          //     name: 'email-notification',
+          //     data: {
+          //       message,
+          //       full_name_to: fn,
+          //       url: env.NOTIFICATION_URL + '/#' + url,
+          //     },
+          //   },
+          // })
+
+          const response = await axios.post(
+            'http://nodered:1880/node-email',
+            {
+              to: email,
+              subject: subject,
+              text: subject,
+              template: {
+                name: 'email-notification',
+                data: {
+                  message: message,
+                  full_name_to: fn,
+                  url: process.env.NOTIFICATION_URL + '/#' + url,
+                },
               },
             },
-          })
-          console.log('email-assessment sent')
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          )
+
+          console.log(response)
         } catch (error) {
           console.error(error)
           throw new ServiceUnavailableException(error)

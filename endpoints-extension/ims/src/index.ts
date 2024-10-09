@@ -1161,7 +1161,7 @@ export default class DefineEndpoint {
         const { max_count_repo } = (await repoCountQuery.first()) || {
           max_count_repo: 0,
         }
-        const highestNumberIk = Math.max(...[max_count, max_count_repo])
+        const highestNumberIk = Math.max(...[max_count, max_count_repo, 1])
         let revisionNumber = 0
         let documentnumberOld = ''
 
@@ -1190,7 +1190,9 @@ export default class DefineEndpoint {
         }
 
         const isHaveOld = submissionData?.detail?.penomoran_dokumen?.value?.old
-        const isHaveRiwayatPerubahan = !!(submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []).length
+        const isHaveRiwayatPerubahan = !!(
+          submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+        ).length
 
         /**
          * Fix case document number tidak standard
@@ -1225,16 +1227,29 @@ export default class DefineEndpoint {
               .max('file_publishers.ik_number', {
                 as: 'maxRevision',
               })
-              .join('submissions', 'submissions.id', 'file_publishers.submission')
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
               .whereNull('file_publishers.deleted_at')
               .where('submissions.business', business_id)
-              .where('file_publishers.procedure_number', dataDoc.procedure_number)
+              .where(
+                'file_publishers.procedure_number',
+                dataDoc.procedure_number
+              )
               .where('file_publishers.ik_number', dataDoc.ik_number)
               .where('file_publishers.document_number', 'like', '%IK%')
-              .where('file_publishers.document_number', 'like', dataDoc.division_code + '%')
+              .where(
+                'file_publishers.document_number',
+                'like',
+                dataDoc.division_code + '%'
+              )
               .first()) || { maxRevision: 0 }
 
-            const highestNumberRev = Math.max(...[maxRevision, dataDoc.revision_number_current])
+            const highestNumberRev = Math.max(
+              ...[maxRevision, dataDoc.revision_number_current]
+            )
 
             return {
               success: true,
@@ -1259,39 +1274,21 @@ export default class DefineEndpoint {
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
            *
            * @old
-           * SPGI/PI0/PD.09.01.00/01
+           * SPGI/PI0/IK.09.01.00/01
            * @new
-           * SPGI/PI0/PD.09.01.00/02
+           * SPGX/PI0/IK.09.02.00/01
            */
-          const { maxRevision } = (await database('file_publishers')
-            .max('file_publishers.ik_number', {
-              as: 'maxRevision',
-            })
-            .join('submissions', 'submissions.id', 'file_publishers.submission')
-            .whereNull('file_publishers.deleted_at')
-            .where('submissions.business', business_id)
-            .where('file_publishers.procedure_number', procedure_number)
-            .where('file_publishers.ik_number', highestNumberIk)
-            .where('file_publishers.document_number', 'like', '%IK%')
-            .where('file_publishers.document_number', 'like', div + '%')
-            .first()) || { maxRevision: 0 }
-
-          const highestNumberRev = Math.max(...[maxRevision, dataDoc.revision_number_current])
-
           return {
             success: true,
             message: 'Successfully',
             data: {
               document_number_old: docNum,
-              document_number: `${dirDiv}/IK.${format2dgt(
-                procedure_number
-              )}.${format2dgt(highestNumberIk)}.00/${format2dgt(
-                highestNumberRev + 1
-              )}`,
+              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumberIk + 1
+                }.00/${format2dgt(1)}`,
               pd: format2dgt(procedure_number),
-              ik: format2dgt(highestNumberIk),
+              ik: format2dgt(highestNumberIk + 1),
               fm: format2dgt(null),
-              revision: format2dgt(highestNumberRev + 1),
+              revision: format2dgt(1),
             },
           }
         }
@@ -1312,95 +1309,139 @@ export default class DefineEndpoint {
           )}/${format2dgt(revision)}-${year}`
 
         if (isRevice && !isRepo) {
+          if (div === division.code) {
+            /**
+             * revisi no repo jika divisi sama
+             *
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.00/01
+             * @new
+             * SPGI/PI0/PD.09.01.00/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.ik_number', {
+                as: 'maxRevision',
+              })
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where('file_publishers.procedure_number', numberProbis)
+              .where('file_publishers.ik_number', ik_number)
+              .where('file_publishers.document_number', 'like', '%IK%')
+              .where('file_publishers.document_number', 'like', div + '%')
+              .first()) || { maxRevision: 0 }
+            revisionNumber = maxRevision + 1
+            console.log('MX', maxRevision)
+
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: documentnumberOld,
+                document_number: `${dirDiv}/IK.${format2dgt(
+                  numberProbis
+                )}.${format2dgt(ik_number)}.00/${format2dgt(revisionNumber)}`,
+                pd: format2dgt(numberProbis),
+                ik: format2dgt(ik_number),
+                fm: format2dgt(null),
+                revision: format2dgt(revisionNumber),
+              },
+            }
+          }
           /**
-           * revisi no repo
+           * revisi no repo jika divisi beda
            *
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
            *
            * @old
            * SPGI/PI0/PD.09.01.00/01
            * @new
-           * SPGI/PI0/PD.09.01.00/02
+           * SPGX/PI0/PD.09.02.00/01
            */
-          const { maxRevision } = (await database('file_publishers')
-            .max('file_publishers.ik_number', {
-              as: 'maxRevision',
-            })
-            .join('submissions', 'submissions.id', 'file_publishers.submission')
-            .whereNull('file_publishers.deleted_at')
-            .where('submissions.business', business_id)
-            .where('file_publishers.procedure_number', numberProbis)
-            .where('file_publishers.ik_number', ik_number)
-            .where('file_publishers.document_number', 'like', '%IK%')
-            .where('file_publishers.document_number', 'like', div + '%')
-            .first()) || { maxRevision: 0 }
-          revisionNumber = maxRevision + 1
-          console.log('MX', maxRevision)
-
           return {
             success: true,
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(
-                numberProbis
-              )}.${format2dgt(ik_number)}.00/${format2dgt(revisionNumber)}`,
+              document_number: `${dirDiv}/IK.${format2dgt(numberProbis)}.${highestNumberIk + 1
+                }.00/${format2dgt(1)}`,
               pd: format2dgt(numberProbis),
-              ik: format2dgt(ik_number),
+              ik: format2dgt(highestNumberIk + 1),
               fm: format2dgt(null),
-              revision: format2dgt(revisionNumber),
+              revision: format2dgt(1),
             },
           }
         } else if (isRevice && isRepo) {
-          const countMaxIkQuery = database('file_publishers')
-            .max('file_publishers.ik_number', {
-              as: 'max_count',
-            })
-            .join('submissions', 'submissions.id', 'file_publishers.submission')
-            .whereNull('file_publishers.deleted_at')
-            .where('submissions.business', business_id)
-            .where('file_publishers.document_number', 'like', '%IK%')
-            .where('file_publishers.document_number', 'like', div + '%')
-            .where('file_publishers.procedure_number', procedure_number)
+          if (div === division.code) {
+            /**
+             * revisi repo divisi sama
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.00/01
+             * @new
+             * SPGI/PI0/PD.09.01.00/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.ik_number', {
+                as: 'maxRevision',
+              })
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where('file_publishers.procedure_number', numberProbis)
+              .where('file_publishers.ik_number', max_count)
+              .where('file_publishers.document_number', 'like', '%IK%')
+              .where('file_publishers.document_number', 'like', div + '%')
+              .first()) || { maxRevision: 0 }
+            console.log('MX revisi repo', maxRevision)
 
-          const { max_count } = (await countMaxIkQuery.first()) || {
-            max_count: 0,
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: documentnumberOld,
+                document_number: `${dirDiv}/IK.${format2dgt(
+                  numberProbis
+                )}.${format2dgt(ik_number)}.00/${format2dgt(revisionNumber)}`,
+                pd: format2dgt(numberProbis),
+                ik: format2dgt(ik_number),
+                fm: format2dgt(null),
+                revision: format2dgt(revisionNumber),
+              },
+            }
           }
           /**
-           * revisi repo
+           * revisi no repo jika divisi beda
+           *
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
            *
            * @old
            * SPGI/PI0/PD.09.01.00/01
            * @new
-           * SPGI/PI0/PD.09.01.00/02
+           * SPGX/PI0/PD.09.02.00/01
            */
-          const { maxRevision } = (await database('file_publishers')
-            .max('file_publishers.ik_number', {
-              as: 'maxRevision',
-            })
-            .join('submissions', 'submissions.id', 'file_publishers.submission')
-            .whereNull('file_publishers.deleted_at')
-            .where('submissions.business', business_id)
-            .where('file_publishers.procedure_number', numberProbis)
-            .where('file_publishers.ik_number', max_count)
-            .where('file_publishers.document_number', 'like', '%IK%')
-            .where('file_publishers.document_number', 'like', div + '%')
-            .first()) || { maxRevision: 0 }
-          console.log('MX revisi repo', maxRevision)
-
           return {
             success: true,
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(
-                numberProbis
-              )}.${format2dgt(ik_number)}.00/${format2dgt(revisionNumber)}`,
+              document_number: `${dirDiv}/IK.${format2dgt(numberProbis)}.${highestNumberIk + 1
+                }.00/${format2dgt(1)}`,
               pd: format2dgt(numberProbis),
-              ik: format2dgt(ik_number),
+              ik: format2dgt(highestNumberIk + 1),
               fm: format2dgt(null),
-              revision: format2dgt(revisionNumber),
+              revision: format2dgt(1),
             },
           }
         }
@@ -2057,7 +2098,9 @@ export default class DefineEndpoint {
     const trx = await database.transaction()
 
     try {
-      const { document_number: dtdn } = file_publisher || { document_number: null }
+      const { document_number: dtdn } = file_publisher || {
+        document_number: null,
+      }
       const { detail: detailData } = data || { detail: null }
 
       const {
@@ -2090,23 +2133,23 @@ export default class DefineEndpoint {
       })
 
       if (!dtdn) {
-        throw new Error('Penomoran belum lengkap: nomor dokumen tidak ada');
+        throw new Error('Penomoran belum lengkap: nomor dokumen tidak ada')
       }
 
       if (!dtApplicableFor) {
-        throw new Error('Penomoran belum lengkap: area tidak ada');
+        throw new Error('Penomoran belum lengkap: area tidak ada')
       }
 
       if (!dtDepartments.length) {
-        throw new Error('Penomoran belum lengkap: departemen tidak ada');
+        throw new Error('Penomoran belum lengkap: departemen tidak ada')
       }
 
       if (!dtDirectorate) {
-        throw new Error('Penomoran belum lengkap: direktorat tidak ada');
+        throw new Error('Penomoran belum lengkap: direktorat tidak ada')
       }
 
       if (!dtDivision) {
-        throw new Error('Penomoran belum lengkap: divisi tidak ada');
+        throw new Error('Penomoran belum lengkap: divisi tidak ada')
       }
 
       // const { number } = await trx('submissions')
@@ -3005,7 +3048,7 @@ export default class DefineEndpoint {
           'mt_departments.i_com_code as werk_directorate',
           database.raw('CAST(document_metas.level AS varchar) as level'),
           'rep_file_publishers.document_number as replacement_document_number',
-          'rep_document_metas.judul as replacement_title',
+          'rep_document_metas.judul as replacement_title'
         )
         .join(
           'directus_users',
@@ -3064,7 +3107,7 @@ export default class DefineEndpoint {
           database.raw('CAST(repo_type.name_type AS varchar) as level'),
           'rep_file_publishers.document_number as replacement_document_number',
           'rep_document_metas.judul as replacement_title',
-          'directus_users.full_name as approved_by',
+          'directus_users.full_name as approved_by'
         )
         .join(
           'directus_users',
@@ -3109,7 +3152,7 @@ export default class DefineEndpoint {
           'repo_type.name_type as level',
           'rep_repo_document_submissions.number as replacement_document_number',
           'rep_repo_document_submissions.title as replacement_title',
-          'user_asgns.full_name as approved_by',
+          'user_asgns.full_name as approved_by'
         )
         .join(
           'directus_users',
@@ -3191,23 +3234,24 @@ export default class DefineEndpoint {
       }
 
       if (adventType === 'REPO') {
-        ObsoleteRequest
-          .select('user_pubs.full_name as approved_by')
+        ObsoleteRequest.select('user_pubs.full_name as approved_by')
           .unionAll(ObsoleteRepo)
           .unionAll(ObsoleteRepoFromProbis)
           .where('advent_type', adventType)
       } else if (adventType === 'PROBIS') {
-        ObsoleteRequest
-          .select('user_pubs.full_name as approved_by')
-          .where('document_obsoletes.advent_type', adventType)
+        ObsoleteRequest.select('user_pubs.full_name as approved_by').where(
+          'document_obsoletes.advent_type',
+          adventType
+        )
       } else if (adventType === 'REQUEST') {
-        ObsoleteRequest
-          .select('user_appr.full_name as approved_by')
-          .where('document_obsoletes.advent_type', adventType)
+        ObsoleteRequest.select('user_appr.full_name as approved_by').where(
+          'document_obsoletes.advent_type',
+          adventType
+        )
       } else {
-        ObsoleteRequest
-          .select('user_pubs.full_name as approved_by')
-          .unionAll(ObsoleteRepo)
+        ObsoleteRequest.select('user_pubs.full_name as approved_by').unionAll(
+          ObsoleteRepo
+        )
       }
 
       const { count } =
