@@ -866,7 +866,7 @@ export default class DefineEndpoint {
       try {
         // Split by '/' to separate sections
         const sections = docNumber.split('/')
-        const [dir, div, area] = docNumber.split('/')
+        const [div, dir, area] = docNumber.split('/')
 
         // Split the third section by '.' to extract DD, XX, ZZ, and CC
         const [procedure_code, procedure_number, ik_number, formulir_number] =
@@ -874,6 +874,7 @@ export default class DefineEndpoint {
 
         // Get revision number from the last section and increment it
         let revision_number = parseInt(sections[3].split('-')[0], 10) + 1
+        let revision_number_current = parseInt(sections[3].split('-')[0], 10)
 
         // Extract the year from the original document number
         // const year = sections[3].split('-')[1]
@@ -889,6 +890,7 @@ export default class DefineEndpoint {
           procedure_number: parseInt(procedure_number, 10), // XX (converted to number)
           ik_number: parseInt(ik_number, 10), // ZZ (converted to number)
           revision_number: revision_number, // Incremented VV
+          revision_number_current, // Incremented VV
           directorate_code: dir, // Directorate code
           division_code: div, // Division code
           area_code: area, // Department code
@@ -1159,7 +1161,7 @@ export default class DefineEndpoint {
         const { max_count_repo } = (await repoCountQuery.first()) || {
           max_count_repo: 0,
         }
-        const highestNumber = Math.max(...[max_count, max_count_repo])
+        const highestNumberIk = Math.max(...[max_count, max_count_repo])
         let revisionNumber = 0
         let documentnumberOld = ''
 
@@ -1177,10 +1179,10 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumber + 1
+              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumberIk + 1
                 }.00/${format2dgt(null)}`,
               pd: format2dgt(procedure_number),
-              ik: format2dgt(highestNumber + 1),
+              ik: format2dgt(highestNumberIk + 1),
               fm: format2dgt(null),
               revision: format2dgt(null),
             },
@@ -1188,11 +1190,12 @@ export default class DefineEndpoint {
         }
 
         const isHaveOld = submissionData?.detail?.penomoran_dokumen?.value?.old
+        const isHaveRiwayatPerubahan = !!(submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []).length
 
         /**
          * Fix case document number tidak standard
          */
-        if (!isHaveOld) {
+        if (isHaveRiwayatPerubahan) {
           const riwayats =
             submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
           const docNum = riwayats
@@ -1208,8 +1211,51 @@ export default class DefineEndpoint {
 
           const dataDoc = parseDocumentNumber(docNum)
 
+          if (div === dataDoc.division_code) {
+            /**
+             * revisi dari repo divnya tetap sama
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.00/01
+             * @new
+             * SPGI/PI0/PD.09.01.00/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.ik_number', {
+                as: 'maxRevision',
+              })
+              .join('submissions', 'submissions.id', 'file_publishers.submission')
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where('file_publishers.procedure_number', dataDoc.procedure_number)
+              .where('file_publishers.ik_number', dataDoc.ik_number)
+              .where('file_publishers.document_number', 'like', '%IK%')
+              .where('file_publishers.document_number', 'like', dataDoc.division_code + '%')
+              .first()) || { maxRevision: 0 }
+
+            const highestNumberRev = Math.max(...[maxRevision, dataDoc.revision_number_current])
+
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/IK.${format2dgt(
+                  dataDoc.procedure_number
+                )}.${format2dgt(dataDoc.ik_number)}.00/${format2dgt(
+                  highestNumberRev + 1
+                )}`,
+                pd: format2dgt(dataDoc.procedure_number),
+                ik: format2dgt(dataDoc.ik_number),
+                fm: format2dgt(null),
+                revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
           /**
-           * revisi repo
+           * revisi repo tapi divnya berbeda
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
            *
            * @old
@@ -1224,11 +1270,13 @@ export default class DefineEndpoint {
             .join('submissions', 'submissions.id', 'file_publishers.submission')
             .whereNull('file_publishers.deleted_at')
             .where('submissions.business', business_id)
-            .where('file_publishers.procedure_number', dataDoc.procedure_number)
-            .where('file_publishers.ik_number', dataDoc.ik_number)
+            .where('file_publishers.procedure_number', procedure_number)
+            .where('file_publishers.ik_number', highestNumberIk)
             .where('file_publishers.document_number', 'like', '%IK%')
             .where('file_publishers.document_number', 'like', div + '%')
             .first()) || { maxRevision: 0 }
+
+          const highestNumberRev = Math.max(...[maxRevision, dataDoc.revision_number_current])
 
           return {
             success: true,
@@ -1236,14 +1284,14 @@ export default class DefineEndpoint {
             data: {
               document_number_old: docNum,
               document_number: `${dirDiv}/IK.${format2dgt(
-                dataDoc.procedure_number
-              )}.${format2dgt(dataDoc.ik_number)}.00/${format2dgt(
-                maxRevision + 1
+                procedure_number
+              )}.${format2dgt(highestNumberIk)}.00/${format2dgt(
+                highestNumberRev + 1
               )}`,
-              pd: format2dgt(dataDoc.procedure_number),
-              ik: format2dgt(dataDoc.ik_number),
+              pd: format2dgt(procedure_number),
+              ik: format2dgt(highestNumberIk),
               fm: format2dgt(null),
-              revision: format2dgt(maxRevision + 1),
+              revision: format2dgt(highestNumberRev + 1),
             },
           }
         }
@@ -1304,6 +1352,20 @@ export default class DefineEndpoint {
             },
           }
         } else if (isRevice && isRepo) {
+          const countMaxIkQuery = database('file_publishers')
+            .max('file_publishers.ik_number', {
+              as: 'max_count',
+            })
+            .join('submissions', 'submissions.id', 'file_publishers.submission')
+            .whereNull('file_publishers.deleted_at')
+            .where('submissions.business', business_id)
+            .where('file_publishers.document_number', 'like', '%IK%')
+            .where('file_publishers.document_number', 'like', div + '%')
+            .where('file_publishers.procedure_number', procedure_number)
+
+          const { max_count } = (await countMaxIkQuery.first()) || {
+            max_count: 0,
+          }
           /**
            * revisi repo
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
@@ -1321,7 +1383,7 @@ export default class DefineEndpoint {
             .whereNull('file_publishers.deleted_at')
             .where('submissions.business', business_id)
             .where('file_publishers.procedure_number', numberProbis)
-            .where('file_publishers.ik_number', ik_number)
+            .where('file_publishers.ik_number', max_count)
             .where('file_publishers.document_number', 'like', '%IK%')
             .where('file_publishers.document_number', 'like', div + '%')
             .first()) || { maxRevision: 0 }
