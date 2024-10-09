@@ -1,0 +1,225 @@
+[
+    {
+        "id": "aecd372088a3b60f",
+        "type": "tab",
+        "label": "email",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ec6594f840abc65c",
+        "type": "inject",
+        "z": "aecd372088a3b60f",
+        "name": "email content",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "The subject",
+        "payload": "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec quam felis, ultricies nec, pellentesque eu, pretium quis, sem. Nulla consequat massa quis enim. Donec pede justo, fringilla vel, aliquet nec, vulputate eget, arcu.",
+        "payloadType": "str",
+        "x": 150,
+        "y": 200,
+        "wires": [
+            [
+                "5435359dc6a60805"
+            ]
+        ]
+    },
+    {
+        "id": "cf075446fbf34636",
+        "type": "mjml-parse",
+        "z": "aecd372088a3b60f",
+        "name": "",
+        "x": 410,
+        "y": 380,
+        "wires": [
+            [
+                "52d9437da99a6eba"
+            ]
+        ]
+    },
+    {
+        "id": "fc0b0105d5b1a822",
+        "type": "template",
+        "z": "aecd372088a3b60f",
+        "name": "email-notification",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "html",
+        "syntax": "mustache",
+        "template": "<mjml>\n  <mj-head>\n    <mj-title>Hello world</mj-title>\n    <mj-font name=\"Roboto\" href=\"https://fonts.googleapis.com/css?family=Roboto:300,500\"></mj-font>\n    <mj-attributes>\n      <mj-all font-family=\"Roboto, Helvetica, sans-serif\"></mj-all>\n      <mj-text font-weight=\"300\" font-size=\"16px\" color=\"#616161\" line-height=\"24px\"></mj-text>\n      <mj-section padding=\"0px\"></mj-section>\n    </mj-attributes>\n  </mj-head>\n  <mj-body background-color=\"#f0f0f0\">\n    <mj-section padding=\"30px 0\" background-color=\"#ffffff\" padding=\"20px\">\n      <mj-column width=\"60%\">\n        <mj-text font-size=\"10px\">Dikirim otomatis dari aplikasi IMS, Mohon tidak di replay</mj-text>\n      </mj-column>\n      <mj-column width=\"40%\">\n        <mj-text font-size=\"18px\" font-weight=\"1000\" align=\"right\">IMS</mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column width=\"45%\">\n        <mj-text align=\"center\" font-weight=\"500\" padding=\"0px\" font-size=\"18px\">{{payload.subject}}</mj-text>\n        <mj-divider border-width=\"2px\" border-color=\"#616161\"></mj-divider>\n        <mj-divider border-width=\"2px\" border-color=\"#616161\" width=\"45%\"></mj-divider>\n      </mj-column>\n    </mj-section>\n    <mj-section padding-top=\"30px\" background-color=\"#ffffff\">\n      <mj-column>\n        <mj-text>\n          Yth. Bapak/Ibu {{payload.template.data.full_name_to}},\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column width=\"100%\">\n        <mj-text>\n          {{payload.template.data.message}}\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column>\n        <mj-button href=\"{{payload.template.data.url}}\" background-color=\"#2186d8\" color=\"white\" font-size=\"16px\"\n          padding=\"25px 25px\" border-radius=\"5px\" align=\"center\">\n          Klik Disini\n        </mj-button>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#2186d8\">\n      <mj-column width=\"89%\">\n        <mj-text padding=\"40px 0px\">\n          <p style=\"font-style: italic; color:#ffffff; line-height: 9px\"> Salam hormat,\n          </p>\n          <p style=\"font-style: italic; color:#ffffff; line-height: 9px\">Aplikasi IMS</p>\n        </mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>",
+        "output": "str",
+        "x": 550,
+        "y": 200,
+        "wires": [
+            [
+                "98ee4b71497c8bdd",
+                "bdcf88ef3e64e31a",
+                "cf075446fbf34636"
+            ]
+        ]
+    },
+    {
+        "id": "b502a3e62738068a",
+        "type": "comment",
+        "z": "aecd372088a3b60f",
+        "name": "MJML parsing",
+        "info": "## Howto\n\n1. Create dynamic content\n2. Use the template node to mix your dynamic content and MJML syntax\n3. Let the MJML parse node convert the template to HTML\n4. Send yoour HTMl with the email node",
+        "x": 130,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "9f0431585a356dcb",
+        "type": "e-mail",
+        "z": "aecd372088a3b60f",
+        "server": "mail.pelindo.co.id",
+        "port": "25",
+        "authtype": "BASIC",
+        "saslformat": false,
+        "token": "",
+        "secure": false,
+        "tls": false,
+        "name": "",
+        "dname": "send email",
+        "x": 790,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "b1248db7ede2fd97",
+        "type": "debug",
+        "z": "aecd372088a3b60f",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "52d9437da99a6eba",
+        "type": "function",
+        "z": "aecd372088a3b60f",
+        "name": "function 1",
+        "func": "msg.topic = msg.body.subject\nmsg.to = msg.body.to\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 380,
+        "wires": [
+            [
+                "b1248db7ede2fd97",
+                "9f0431585a356dcb"
+            ]
+        ]
+    },
+    {
+        "id": "5435359dc6a60805",
+        "type": "function",
+        "z": "aecd372088a3b60f",
+        "name": "function 2",
+        "func": "\n// example body\n// const body = {\n//     to: 'anangkurendi@gmail.com',\n//     subject: 'Audit Internal',\n//     text: 'Audit Internal',\n//     template: {\n//         name: 'email-notification',\n//         data: {\n//             message: 'mencoba mencoba',\n//             full_name: 'Anang Kurendy',\n//             url: \"https://ims.pelindo.co.id/#/document-review\",\n//         },\n//     },\n// }\n\nmsg.body = msg.payload\n\nif (msg?.body?.template?.name === 'email-notification') {\n    node.send([msg, null])\n}\n\nif (msg?.body?.template?.name === 'email-assessment') {\n    node.send([null,msg])\n}",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 200,
+        "wires": [
+            [
+                "fc0b0105d5b1a822"
+            ],
+            [
+                "50d766a589a03b17"
+            ]
+        ]
+    },
+    {
+        "id": "98ee4b71497c8bdd",
+        "type": "debug",
+        "z": "aecd372088a3b60f",
+        "name": "debug 9",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 800,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "50d766a589a03b17",
+        "type": "template",
+        "z": "aecd372088a3b60f",
+        "name": "email-assessment",
+        "field": "payload",
+        "fieldType": "msg",
+        "format": "html",
+        "syntax": "mustache",
+        "template": "<mjml>\n  <mj-head>\n    <mj-title>Hello world</mj-title>\n    <mj-font name=\"Roboto\" href=\"https://fonts.googleapis.com/css?family=Roboto:300,500\"></mj-font>\n    <mj-attributes>\n      <mj-all font-family=\"Roboto, Helvetica, sans-serif\"></mj-all>\n      <mj-text font-weight=\"300\" font-size=\"16px\" color=\"#616161\" line-height=\"24px\"></mj-text>\n      <mj-section padding=\"0px\"></mj-section>\n    </mj-attributes>\n  </mj-head>\n  <mj-body background-color=\"#f0f0f0\">\n    <mj-section padding=\"30px 0\" background-color=\"#ffffff\" padding=\"20px\">\n      <mj-column width=\"60%\">\n        <mj-text font-size=\"10px\">Dikirim otomatis dari aplikasi IMS, Mohon tidak di replay</mj-text>\n      </mj-column>\n      <mj-column width=\"40%\">\n        <mj-text font-size=\"18px\" font-weight=\"1000\" align=\"right\">IMS</mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column width=\"45%\">\n        <mj-text align=\"center\" font-weight=\"500\" padding=\"0px\" font-size=\"18px\">{{payload.subject}}</mj-text>\n        <mj-divider border-width=\"2px\" border-color=\"#616161\"></mj-divider>\n        <mj-divider border-width=\"2px\" border-color=\"#616161\" width=\"45%\"></mj-divider>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column>\n        <mj-text>\n          Yth. Bapak/Ibu {{payload.template.data.full_name_to}},\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column>\n        <mj-text>\n          Kami ingin menginformasikan bahwa Anda telah menerima permintaan persetujuan terkait dokumen yang diajukan\n          oleh.\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column>\n        <mj-text>\n          <b>Nama: {{payload.template.data.full_name}}.</b>\n          <br />\n          <b>Email: {{payload.template.data.email}}.</b>\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column>\n        <mj-text>\n          Mohon kesediaan Anda untuk meninjau dokumen tersebut melalui tautan di bawah ini\n        </mj-text>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#ffffff\">\n      <mj-column>\n        <mj-button href=\"{{payload.template.data.url}}\" background-color=\"#2186d8\" color=\"white\" font-size=\"16px\"\n          padding=\"25px 25px\" border-radius=\"5px\" align=\"center\">\n          Review dokumen\n        </mj-button>\n      </mj-column>\n    </mj-section>\n    <mj-section background-color=\"#2186d8\">\n      <mj-column width=\"89%\">\n        <mj-text padding=\"40px 0px\">\n          <p style=\"font-style: italic; color:#ffffff; line-height: 9px\"> Salam hormat,\n          </p>\n          <p style=\"font-style: italic; color:#ffffff; line-height: 9px\">Aplikasi IMS</p>\n        </mj-text>\n      </mj-column>\n    </mj-section>\n  </mj-body>\n</mjml>",
+        "output": "str",
+        "x": 550,
+        "y": 260,
+        "wires": [
+            [
+                "98ee4b71497c8bdd",
+                "bdcf88ef3e64e31a",
+                "cf075446fbf34636"
+            ]
+        ]
+    },
+    {
+        "id": "6913475392597d0c",
+        "type": "http in",
+        "z": "aecd372088a3b60f",
+        "name": "Post dari datacore",
+        "url": "/node-email",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 260,
+        "wires": [
+            [
+                "5435359dc6a60805"
+            ]
+        ]
+    },
+    {
+        "id": "bdcf88ef3e64e31a",
+        "type": "http response",
+        "z": "aecd372088a3b60f",
+        "name": "reponse",
+        "statusCode": "201",
+        "headers": {},
+        "x": 800,
+        "y": 260,
+        "wires": []
+    }
+]

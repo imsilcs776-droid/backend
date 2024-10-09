@@ -1,3 +1,5 @@
+const axios = require('axios')
+
 module.exports = function defineHook(
   { filter, action },
   { services, exceptions, database, env }
