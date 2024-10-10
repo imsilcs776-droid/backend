@@ -1224,7 +1224,7 @@ export default class DefineEndpoint {
              * SPGI/PI0/PD.09.01.00/02
              */
             const { maxRevision } = (await database('file_publishers')
-              .max('file_publishers.ik_number', {
+              .max('file_publishers.revision_number', {
                 as: 'maxRevision',
               })
               .join(
@@ -1321,7 +1321,7 @@ export default class DefineEndpoint {
              * SPGI/PI0/PD.09.01.00/02
              */
             const { maxRevision } = (await database('file_publishers')
-              .max('file_publishers.ik_number', {
+              .max('file_publishers.revision_number', {
                 as: 'maxRevision',
               })
               .join(
@@ -1389,7 +1389,7 @@ export default class DefineEndpoint {
              * SPGI/PI0/PD.09.01.00/02
              */
             const { maxRevision } = (await database('file_publishers')
-              .max('file_publishers.ik_number', {
+              .max('file_publishers.revision_number', {
                 as: 'maxRevision',
               })
               .join(
@@ -1495,7 +1495,7 @@ export default class DefineEndpoint {
         const { max_count_repo } = (await repoCountQuery.first()) || {
           max_count_repo: 0,
         }
-        const highestNumber = Math.max(...[max_count, max_count_repo])
+        const highestNumber = Math.max(...[max_count, max_count_repo, 1])
         let revisionNumber = 0
         let documentnumberOld = ''
 
@@ -1524,6 +1524,113 @@ export default class DefineEndpoint {
           }
         }
 
+        const isHaveRiwayatPerubahan = !!(
+          submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+        ).length
+
+        /**
+         * Fix case document number tidak standard
+         */
+        if (isHaveRiwayatPerubahan) {
+          const riwayats =
+            submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+          const docNum = riwayats
+            .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
+            .map((revice: any) => {
+              const getDocNum =
+                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+              const [text, docNum] = getDocNum
+              return docNum?.trim()
+            })
+            .filter(Boolean) // Filter out undefined or null values
+            .pop() // Get the last document number
+
+          const dataDoc = parseDocumentNumber(docNum)
+
+          if (div === dataDoc.division_code) {
+            /**
+             * revisi dari repo divnya tetap sama
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.00/01
+             * @new
+             * SPGI/PI0/PD.09.01.00/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.revision_number', {
+                as: 'maxRevision',
+              })
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where(
+                'file_publishers.procedure_number',
+                dataDoc.procedure_number
+              )
+              .where('file_publishers.ik_number', dataDoc.ik_number)
+              .where('file_publishers.document_number', 'like', '%IK%')
+              .where(
+                'file_publishers.document_number',
+                'like',
+                dataDoc.division_code + '%'
+              )
+              .where('file_publishers.formulir_number', dataDoc.formulir_number)
+              .first()) || { maxRevision: 0 }
+
+            const highestNumberRev = Math.max(
+              ...[maxRevision, dataDoc.revision_number_current]
+            )
+
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/FM.${format2dgt(
+                  dataDoc.procedure_number
+                )}.${format2dgt(dataDoc.ik_number)}.${format2dgt(
+                  dataDoc.formulir_number
+                )}/${format2dgt(highestNumberRev + 1)}`,
+                pd: format2dgt(dataDoc.procedure_number),
+                ik: format2dgt(dataDoc.ik_number),
+                fm: format2dgt(dataDoc.formulir_number),
+                revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
+          /**
+           * revisi repo tapi divnya berbeda
+           * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+           *
+           * @old
+           * SPGI/PI0/IK.09.01.01/01
+           * @new
+           * SPGX/PI0/IK.09.01.02/01
+           */
+          return {
+            success: true,
+            message: 'Successfully',
+            data: {
+              document_number_old: docNum,
+              document_number: `${dirDiv}/FM.${format2dgt(
+                procedure_number
+              )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                1
+              )}`,
+              pd: format2dgt(procedure_number),
+              ik: format2dgt(ik_number),
+              fm: format2dgt(highestNumber + 1),
+              revision: format2dgt(1),
+            },
+          }
+        }
+
         const {
           division,
           numberProbis,
@@ -1541,88 +1648,152 @@ export default class DefineEndpoint {
           )}/${format2dgt(revision)}-${year}`
 
         if (isRevice && !isRepo) {
+          if (div === division.code) {
+            /**
+             * revisi no repo
+             *
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.01/01
+             * @new
+             * SPGI/PI0/PD.09.01.01/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.revision_number', {
+                as: 'maxRevision',
+              })
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where('file_publishers.procedure_number', procedure_number)
+              .where('file_publishers.ik_number', ik_number)
+              .where('file_publishers.formulir_number', formulir_number)
+              .where('file_publishers.document_number', 'like', '%FM%')
+              .where('file_publishers.document_number', 'like', div + '%')
+              .first()) || { maxRevision: 0 }
+            revisionNumber = maxRevision + 1
+            console.log('MX', maxRevision)
+
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: documentnumberOld,
+                document_number: `${dirDiv}/FM.${format2dgt(
+                  procedure_number
+                )}.${format2dgt(ik_number)}.${format2dgt(formulir_number)}/${format2dgt(
+                  revisionNumber
+                )}`,
+                pd: format2dgt(procedure_number),
+                ik: format2dgt(ik_number),
+                fm: format2dgt(formulir_number),
+                revision: format2dgt(revisionNumber),
+              },
+            }
+          }
+
           /**
-           * revisi no repo
-           *
+           * revisi !repo tapi divnya berbeda
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
            *
            * @old
-           * SPGI/PI0/PD.09.01.00/01
+           * SPGI/PI0/FM.09.01.01/01
            * @new
-           * SPGI/PI0/PD.09.01.00/02
+           * SPGX/PI0/FM.09.20.02/01
            */
-          const { maxRevision } = (await database('file_publishers')
-            .max('file_publishers.formulir_number', {
-              as: 'maxRevision',
-            })
-            .join('submissions', 'submissions.id', 'file_publishers.submission')
-            .whereNull('file_publishers.deleted_at')
-            .where('submissions.business', business_id)
-            .where('file_publishers.procedure_number', numberProbis)
-            .where('file_publishers.ik_number', ik_number)
-            .where('file_publishers.formulir_number', formulir_number)
-            .where('file_publishers.document_number', 'like', '%FM%')
-            .where('file_publishers.document_number', 'like', div + '%')
-            .first()) || { maxRevision: 0 }
-          revisionNumber = maxRevision + 1
-          console.log('MX', maxRevision)
-
           return {
             success: true,
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(
+              document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${format2dgt(ik_number)}.${formulir_number}/${format2dgt(
-                revisionNumber
+              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                1
               )}`,
-              pd: format2dgt(numberProbis),
+              pd: format2dgt(procedure_number),
               ik: format2dgt(ik_number),
-              fm: format2dgt(formulir_number),
-              revision: format2dgt(revisionNumber),
+              fm: format2dgt(highestNumber + 1),
+              revision: format2dgt(1),
             },
           }
         } else if (isRevice && isRepo) {
+          if (div === division.code) {
+            /**
+             * revisi repo
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.00/01
+             * @new
+             * SPGI/PI0/PD.09.01.00/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.revision_number', {
+                as: 'maxRevision',
+              })
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where('file_publishers.procedure_number', numberProbis)
+              .where('file_publishers.ik_number', numberIk)
+              .where('file_publishers.formulir_number', numberForm)
+              .where('file_publishers.document_number', 'like', '%FM%')
+              .where('file_publishers.document_number', 'like', div + '%')
+              .first()) || { maxRevision: 0 }
+            revisionNumber = maxRevision + 1
+            console.log('MX revisi repo', maxRevision, numberForm, numberIk, numberProbis)
+
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: documentnumberOld,
+                document_number: `${dirDiv}/FM.${format2dgt(
+                  numberProbis
+                )}.${format2dgt(numberIk)}.${format2dgt(numberForm)}/${format2dgt(
+                  revisionNumber
+                )}`,
+                pd: format2dgt(numberProbis),
+                ik: format2dgt(numberIk),
+                fm: format2dgt(numberForm),
+                revision: format2dgt(revisionNumber),
+              },
+            }
+          }
+
           /**
-           * revisi repo
+           * revisi !repo tapi divnya berbeda
            * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
            *
            * @old
-           * SPGI/PI0/PD.09.01.00/01
+           * SPGI/PI0/FM.09.01.01/01
            * @new
-           * SPGI/PI0/PD.09.01.00/02
+           * SPGX/PI0/FM.09.20.02/01
            */
-          const { maxRevision } = (await database('file_publishers')
-            .max('file_publishers.formulir_number', {
-              as: 'maxRevision',
-            })
-            .join('submissions', 'submissions.id', 'file_publishers.submission')
-            .whereNull('file_publishers.deleted_at')
-            .where('submissions.business', business_id)
-            .where('file_publishers.procedure_number', numberProbis)
-            .where('file_publishers.ik_number', ik_number)
-            .where('file_publishers.formulir_number', formulir_number)
-            .where('file_publishers.document_number', 'like', '%FM%')
-            .where('file_publishers.document_number', 'like', div + '%')
-            .first()) || { maxRevision: 0 }
-          revisionNumber = maxRevision + 1
-          console.log('MX revisi repo', maxRevision)
-
           return {
             success: true,
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(
+              document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${format2dgt(ik_number)}.${formulir_number}/${format2dgt(
-                revisionNumber
+              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                1
               )}`,
               pd: format2dgt(numberProbis),
-              ik: format2dgt(ik_number),
-              fm: format2dgt(formulir_number),
-              revision: format2dgt(revisionNumber),
+              ik: format2dgt(numberIk),
+              fm: format2dgt(highestNumber + 1),
+              revision: format2dgt(1),
             },
           }
         }
