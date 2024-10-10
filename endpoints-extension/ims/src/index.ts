@@ -930,8 +930,8 @@ export default class DefineEndpoint {
         formulir_number,
       } = submissionData?.detail?.penomoran_dokumen?.value || {}
 
-      const div = divisionSub.code ?? 'PI0'
-      const dirDiv = `${divisionSub.code}/${applicableForSub?.code || 'PI0'}`
+      const div = divisionSub?.code ?? 'PI0'
+      const dirDiv = `${divisionSub?.code}/${applicableForSub?.code || 'PI0'}`
       // return dirDiv
       let repoCountQuery
       let countQuery
@@ -990,6 +990,107 @@ export default class DefineEndpoint {
           }
         }
 
+        const isHaveRiwayatPerubahan = !!(
+          submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+        ).length
+
+        /**
+         * Fix case document number tidak standard
+         */
+        if (isHaveRiwayatPerubahan) {
+          const riwayats =
+            submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+          const docNum = riwayats
+            .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
+            .map((revice: any) => {
+              const getDocNum =
+                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+              const [text, docNum] = getDocNum
+              return docNum?.trim()
+            })
+            .filter(Boolean) // Filter out undefined or null values
+            .pop() // Get the last document number
+
+          const dataDoc = parseDocumentNumber(docNum)
+
+          if (div === dataDoc.division_code) {
+            /**
+             * revisi dari repo divnya tetap sama
+             * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+             *
+             * @old
+             * SPGI/PI0/PD.09.01.00/01
+             * @new
+             * SPGI/PI0/PD.09.01.00/02
+             */
+            const { maxRevision } = (await database('file_publishers')
+              .max('file_publishers.revision_number', {
+                as: 'maxRevision',
+              })
+              .join(
+                'submissions',
+                'submissions.id',
+                'file_publishers.submission'
+              )
+              .whereNull('file_publishers.deleted_at')
+              .where('submissions.business', business_id)
+              .where(
+                'file_publishers.procedure_number',
+                dataDoc.procedure_number
+              )
+              .where('file_publishers.document_number', 'like', '%PD%')
+              .where(
+                'file_publishers.document_number',
+                'like',
+                dataDoc.division_code + '%'
+              )
+              .first()) || { maxRevision: 0 }
+
+            const highestNumberRev = Math.max(
+              ...[maxRevision, dataDoc.revision_number_current]
+            )
+
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/PD.${format2dgt(
+                  dataDoc.procedure_number
+                )}.00.00/${format2dgt(
+                  highestNumberRev + 1
+                )}`,
+                pd: format2dgt(dataDoc.procedure_number),
+                ik: format2dgt(null),
+                fm: format2dgt(null),
+                revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
+          /**
+           * revisi repo tapi divnya berbeda
+           * DIVISI_LAMA/PI0/PD.COUNT_LAMA.00.00/REVISI_BARU
+           *
+           * @old
+           * SPGI/PI0/IK.09.01.00/01
+           * @new
+           * SPGX/PI0/IK.09.02.00/01
+           */
+          return {
+            success: true,
+            message: 'Successfully',
+            data: {
+              document_number_old: docNum,
+              document_number: `${dirDiv}/PD.${format2dgt(highestNumber + 1)}.00.00/${format2dgt(1)}`,
+              pd: format2dgt(highestNumber + 1),
+              ik: format2dgt(null),
+              fm: format2dgt(null),
+              revision: format2dgt(1),
+            },
+          }
+        }
+
         const {
           division,
           numberProbis,
@@ -1000,7 +1101,8 @@ export default class DefineEndpoint {
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
 
-        documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
+
+        documentnumberOld = `${division?.code}/${applicableFor?.code || 'PI0'
           }/PD.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
             numberForm
           )}/${format2dgt(revision)}-${year}`
