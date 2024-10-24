@@ -1057,9 +1057,7 @@ export default class DefineEndpoint {
                 document_number_old: docNum,
                 document_number: `${dirDiv}/PD.${format2dgt(
                   dataDoc.procedure_number
-                )}.00.00/${format2dgt(
-                  highestNumberRev + 1
-                )}`,
+                )}.00.00/${format2dgt(highestNumberRev + 1)}`,
                 pd: format2dgt(dataDoc.procedure_number),
                 ik: format2dgt(null),
                 fm: format2dgt(null),
@@ -1082,7 +1080,9 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: docNum,
-              document_number: `${dirDiv}/PD.${format2dgt(highestNumber + 1)}.00.00/${format2dgt(1)}`,
+              document_number: `${dirDiv}/PD.${format2dgt(
+                highestNumber + 1
+              )}.00.00/${format2dgt(1)}`,
               pd: format2dgt(highestNumber + 1),
               ik: format2dgt(null),
               fm: format2dgt(null),
@@ -1100,7 +1100,6 @@ export default class DefineEndpoint {
           revision,
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
-
 
         documentnumberOld = `${division?.code}/${applicableFor?.code || 'PI0'
           }/PD.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
@@ -1215,7 +1214,6 @@ export default class DefineEndpoint {
       }
 
       if (countType.IK === usedTo) {
-        console.log('DISINI', procedure_number, dirDiv)
         if (procedure_number === undefined) {
           return {
             success: false,
@@ -1732,6 +1730,7 @@ export default class DefineEndpoint {
             },
           }
         }
+        const isHaveOld = submissionData?.detail?.penomoran_dokumen?.value?.old
 
         const {
           division,
@@ -1742,7 +1741,34 @@ export default class DefineEndpoint {
           revision,
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
-        console.log(divisionSub, division)
+
+        if (!isHaveRiwayatPerubahan && !isHaveOld) {
+          /**
+           * revisi tidak ada riwayat perubahan
+           *
+           * DIVISIBARU/PI0/PD.COUNT_TERTINGGI_DIDIVISI_BARU.00.00/00
+           *
+           * @old
+           * SHSE/PI0/PD.09.00.00/04
+           * @new
+           * SPGI/PI0/PD.01.00.00/00
+           *
+           */
+          return {
+            success: true,
+            message: 'Successfully tetapi tidak ada riwayat perubahan dan old',
+            data: {
+              document_number_old: 'tidak ada riwayat perubahan dan old',
+              document_number: `${dirDiv}/FM.${format2dgt(
+                procedure_number
+              )}.00.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
+              pd: format2dgt(procedure_number),
+              ik: format2dgt(null),
+              fm: format2dgt(highestNumber + 1),
+              revision: format2dgt(1),
+            },
+          }
+        }
 
         documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
           }/FM.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
@@ -1788,9 +1814,9 @@ export default class DefineEndpoint {
                 document_number_old: documentnumberOld,
                 document_number: `${dirDiv}/FM.${format2dgt(
                   procedure_number
-                )}.${format2dgt(ik_number)}.${format2dgt(formulir_number)}/${format2dgt(
-                  revisionNumber
-                )}`,
+                )}.${format2dgt(ik_number)}.${format2dgt(
+                  formulir_number
+                )}/${format2dgt(revisionNumber)}`,
                 pd: format2dgt(procedure_number),
                 ik: format2dgt(ik_number),
                 fm: format2dgt(formulir_number),
@@ -1815,9 +1841,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(
-                1
-              )}`,
+              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(ik_number),
               fm: format2dgt(highestNumber + 1),
@@ -1853,7 +1877,13 @@ export default class DefineEndpoint {
               .where('file_publishers.document_number', 'like', div + '%')
               .first()) || { maxRevision: 0 }
             revisionNumber = maxRevision + 1
-            console.log('MX revisi repo', maxRevision, numberForm, numberIk, numberProbis)
+            console.log(
+              'MX revisi repo',
+              maxRevision,
+              numberForm,
+              numberIk,
+              numberProbis
+            )
 
             return {
               success: true,
@@ -1862,9 +1892,9 @@ export default class DefineEndpoint {
                 document_number_old: documentnumberOld,
                 document_number: `${dirDiv}/FM.${format2dgt(
                   numberProbis
-                )}.${format2dgt(numberIk)}.${format2dgt(numberForm)}/${format2dgt(
-                  revisionNumber
-                )}`,
+                )}.${format2dgt(numberIk)}.${format2dgt(
+                  numberForm
+                )}/${format2dgt(revisionNumber)}`,
                 pd: format2dgt(numberProbis),
                 ik: format2dgt(numberIk),
                 fm: format2dgt(numberForm),
@@ -1889,9 +1919,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(
-                1
-              )}`,
+              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
               pd: format2dgt(numberProbis),
               ik: format2dgt(numberIk),
               fm: format2dgt(highestNumber + 1),
@@ -1978,6 +2006,7 @@ export default class DefineEndpoint {
           }
         }
 
+        const isHaveOld = submissionData?.detail?.penomoran_dokumen?.value?.old
         const isHaveRiwayatPerubahan = !!(
           submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
         ).length
@@ -2094,7 +2123,34 @@ export default class DefineEndpoint {
           revision,
           applicableFor,
         } = submissionData?.detail?.penomoran_dokumen?.value?.old || {}
-        console.log(divisionSub, division)
+
+        if (!isHaveRiwayatPerubahan && !isHaveOld) {
+          /**
+           * revisi tidak ada riwayat perubahan
+           *
+           * DIVISIBARU/PI0/PD.COUNT_TERTINGGI_DIDIVISI_BARU.00.00/00
+           *
+           * @old
+           * SHSE/PI0/PD.09.00.00/04
+           * @new
+           * SPGI/PI0/PD.01.00.00/00
+           *
+           */
+          return {
+            success: true,
+            message: 'Successfully tetapi tidak ada riwayat perubahan dan old',
+            data: {
+              document_number_old: 'tidak ada riwayat perubahan dan old',
+              document_number: `${dirDiv}/FM.${format2dgt(
+                procedure_number
+              )}.00.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
+              pd: format2dgt(procedure_number),
+              ik: format2dgt(null),
+              fm: format2dgt(highestNumber + 1),
+              revision: format2dgt(1),
+            },
+          }
+        }
 
         documentnumberOld = `${division.code}/${applicableFor?.code || 'PI0'
           }/FM.${format2dgt(numberProbis)}.${format2dgt(numberIk)}.${format2dgt(
@@ -2119,9 +2175,9 @@ export default class DefineEndpoint {
             data: {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
-                numberProbis
+                procedure_number
               )}.00.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
-              pd: format2dgt(numberProbis),
+              pd: format2dgt(procedure_number),
               ik: format2dgt(null),
               fm: format2dgt(highestNumber + 1),
               revision: format2dgt(1),
@@ -3060,37 +3116,11 @@ export default class DefineEndpoint {
         UsersService,
       })
 
-      const permitRoles = await database('document_permit_roles').select('role')
-      const roleIds = permitRoles.map((role: any) => role.role)
-
-      console.log(roleIds)
-
-      const { code } =
-        (await database('Privileges')
-          .select('roles.code')
-          .join('roles', 'roles.id', 'Privileges.role')
-          .whereNull('roles.deleted_at')
-          .where('Privileges.user', userId)
-          .whereIn('Privileges.role', [...roleIds])
-          .first()) || {}
-
-      if (code) {
-        return {
-          success: true,
-          message: 'Successfully check',
-          data: {
-            permit: true,
-          },
-          meta: {
-            description: 'permit by roles',
-          },
-        }
-      }
-
       const filePubId = await database('file_publishers')
         .select('file_publishers.id')
+        .join('document_departments', 'document_departments.submission', 'file_publishers.submission')
         .whereNull('file_publishers.deleted_at')
-        .where('file_publishers.department_division', department)
+        .where('document_departments.department', department)
         .first()
 
       if (filePubId) {
@@ -3111,7 +3141,7 @@ export default class DefineEndpoint {
         .join('statuses', 'statuses.id', 'document_permits.status')
         .whereNull('statuses.deleted_at')
         .where('document_permits.file_publish', file_publisher_id)
-        .where('document_permits.created_by', userId)
+        .where('document_permits.user', userId)
         .where('statuses.code', 'APPRD')
         .where('statuses.category', 'FORM')
         .first()
