@@ -1004,7 +1004,7 @@ export default class DefineEndpoint {
             .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
             .map((revice: any) => {
               const getDocNum =
-                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+                revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
               const [text, docNum] = getDocNum
               return docNum?.trim()
             })
@@ -1304,7 +1304,7 @@ export default class DefineEndpoint {
             .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
             .map((revice: any) => {
               const getDocNum =
-                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+                revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
               const [text, docNum] = getDocNum
               return docNum?.trim()
             })
@@ -1638,7 +1638,7 @@ export default class DefineEndpoint {
             .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
             .map((revice: any) => {
               const getDocNum =
-                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+                revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
               const [text, docNum] = getDocNum
               return docNum?.trim()
             })
@@ -2021,7 +2021,7 @@ export default class DefineEndpoint {
             .sort((a: any, b: any) => a.revisiKe - b.revisiKe)
             .map((revice: any) => {
               const getDocNum =
-                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+                revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
               const [text, docNum] = getDocNum
               return docNum?.trim()
             })
