@@ -842,12 +842,12 @@ export default class DefineEndpoint {
           schema: { type: 'number' },
           required: false,
         },
-        {
-          in: 'query',
-          name: 'is_revice',
-          schema: { type: 'number' },
-          required: false,
-        },
+        // {
+        //   in: 'query',
+        //   name: 'is_revice',
+        //   schema: { type: 'number' },
+        //   required: false,
+        // },
       ],
     }
   )
@@ -856,7 +856,7 @@ export default class DefineEndpoint {
     @Query('business_id') business_id: number,
     @Query('used_to') usedTo: number,
     @Query('is_repo') isRepo: number,
-    @Query('is_revice') isRevice: number,
+    // @Query('is_revice') isRevice: number,
     @Context() ctx: any
   ) {
     /**
@@ -913,10 +913,16 @@ export default class DefineEndpoint {
       FORMULIR_NO_IK = 55,
     }
     try {
-      const { data: submissionData, id } = (await database('submissions')
-        .select('data', 'id')
+      const { data: submissionData, id, repo_revice, submission_revice } = (await database('submissions')
+        .select('data', 'id', 'repo_revice', 'submission_revice')
         .where('submissions.id', submissionId)
         .first()) || { data: {} }
+
+      let isRevice = 0
+
+      if (submission_revice || repo_revice) {
+        isRevice = 1
+      }
 
       if (!id) throw new Error('invalid submission id')
 
