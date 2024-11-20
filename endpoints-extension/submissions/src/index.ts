@@ -253,7 +253,7 @@ export default class DefineEndpoint {
           )
           .where('form_logs.submission', submissionId)
           .where('approve_orders.order', 2)
-          // .where('statuses.code', 'APPRD')
+          .where('statuses.code', '<>', 'REJCT')
           .whereNull('approve_orders.deleted_at')
           .orderBy('form_logs.reject_number', 'desc')
 
@@ -432,7 +432,7 @@ export default class DefineEndpoint {
         .join(higestReject, 'max_number_reject.max', 'form_logs.reject_number')
         .where('form_logs.submission', submissionId)
         .where('approve_orders.order', 2)
-        .where('statuses.code', 'APPRD')
+        .where('statuses.code', '<>', 'REJCT')
         .whereNull('approve_orders.deleted_at')
         .whereNull('form_actors.deleted_at')
         .whereNull('ffa.deleted_at')
@@ -768,13 +768,11 @@ export default class DefineEndpoint {
           applicableFor === 'KP0' || applicableFor === 'PI0' ? 1 : 0
         let jobTitle = ''
         if (officer.order === 2) {
-          jobTitle = `${approver} ${
-            disposeSameWord(approver, officer.department) || ''
-          }`
+          jobTitle = `${approver} ${disposeSameWord(approver, officer.department) || ''
+            }`
         } else if (isHolding && officer.order === 3) {
-          jobTitle = `${apprType.GH} ${
-            disposeSameWord(approver, officer.department) || ''
-          }`
+          jobTitle = `${apprType.GH} ${disposeSameWord(approver, officer.department) || ''
+            }`
         } else if (!isHolding && officer.order === 3) {
           jobTitle = `${apprType.DVH} ${officer.department || ''}`
         } else if (isHolding && officer.order > 3) {

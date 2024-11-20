@@ -11,7 +11,7 @@ import {
   Put,
 } from '@mv-data-core/decorator'
 import { item } from './helpers'
-import { type SearchDTO, type SubmissionDTO } from './interfaces'
+import type { SearchDTO, SubmissionDTO } from './interfaces'
 import { v4 } from 'uuid'
 import { format2dgt } from './utils'
 import client from './providers'
@@ -257,8 +257,7 @@ export default class DefineEndpoint {
 
       if (
         departments &&
-        typeof departments === 'object' &&
-        departments instanceof Array &&
+        typeof departments === 'object' && Array.isArray(departments) &&
         departments.length > 0
       ) {
         submissionsQuery.join(
@@ -284,8 +283,7 @@ export default class DefineEndpoint {
 
       if (
         units &&
-        typeof units === 'object' &&
-        units instanceof Array &&
+        typeof units === 'object' && Array.isArray(units) &&
         units.length > 0
       ) {
         submissionsQuery.join(
@@ -332,6 +330,7 @@ export default class DefineEndpoint {
           limit,
         },
       }
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     } catch (error: any) {
       console.log(error)
       return {
@@ -906,7 +905,7 @@ export default class DefineEndpoint {
 
     const { database } = ctx
 
-    const enum countType {
+    enum countType {
       PROCEDUR = 3,
       IK = 4,
       FORMULIR = 5,
@@ -919,10 +918,6 @@ export default class DefineEndpoint {
         .first()) || { data: {} }
 
       let isRevice = 0
-
-      if (submission_revice || repo_revice) {
-        isRevice = 1
-      }
 
       if (!id) throw new Error('invalid submission id')
 
@@ -938,6 +933,15 @@ export default class DefineEndpoint {
 
       const div = divisionSub?.code ?? 'PI0'
       const dirDiv = `${divisionSub?.code}/${applicableForSub?.code || 'PI0'}`
+
+      const isHaveRiwayatPerubahan = !!(
+        submissionData?.detail?.evaluasi_dan_riwayat_perubahan?.value || []
+      ).length
+
+      if (submission_revice || repo_revice || isHaveRiwayatPerubahan) {
+        isRevice = 1
+      }
+
       // return dirDiv
       let repoCountQuery
       let countQuery
@@ -2344,6 +2348,7 @@ export default class DefineEndpoint {
           'approve_order.assign_to.name',
           'approve_order.assign_to.id',
           'reject_number',
+          'assignee_log'
         ],
       }
       const formLogs = await item.getItem({
@@ -2386,7 +2391,26 @@ export default class DefineEndpoint {
         .join('mt_jobs', 'mt_jobs.id', 'directus_users.job')
 
       const data = formLogs.map((formLog: any) => {
-        const { created_by } = formLog
+        const { created_by, assignee_log } = formLog
+
+        if (assignee_log) {
+          const assignee_logCp = { ...assignee_log }
+          formLog.origin = {
+            avatar: null,
+            id: assignee_logCp?.id,
+            job: {
+              name: assignee_logCp?.i_job_name,
+              id: '',
+            },
+            profile: {
+              email: assignee_logCp?.email,
+              full_name: assignee_logCp?.full_name,
+            },
+          }
+
+          return formLog
+        }
+
         const assesor = assesors.find(
           (assesor: any) =>
             assesor.form_actor === formLog.approve_order?.assign_to?.id
