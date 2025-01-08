@@ -885,9 +885,9 @@ export default class DefineEndpoint {
 
         return {
           document_number: updatedDocumentNumber, // Updated document number
-          formulir_number: parseInt(formulir_number, 10), // CC (converted to number)
-          procedure_number: parseInt(procedure_number, 10), // XX (converted to number)
-          ik_number: parseInt(ik_number, 10), // ZZ (converted to number)
+          formulir_number: parseInt(formulir_number, 10) || 0, // CC (converted to number)
+          procedure_number: parseInt(procedure_number, 10) || 0, // XX (converted to number)
+          ik_number: parseInt(ik_number, 10) || 0, // ZZ (converted to number)
           revision_number: revision_number, // Incremented VV
           revision_number_current, // Incremented VV
           directorate_code: dir, // Directorate code
