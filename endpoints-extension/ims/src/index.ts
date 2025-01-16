@@ -862,6 +862,19 @@ export default class DefineEndpoint {
      * change document number from repo revice into new version
      */
     function parseDocumentNumber(docNumber: any) {
+      if (!docNumber) return {
+        docNumber: null,
+        revision_number: null,
+        revision_number_current: 0,
+        year: null,
+        procedure_code: null,
+        procedure_number: null,
+        ik_number: null,
+        formulir_number: null,
+        div: null,
+        dir: null,
+        area: null,
+      }
       try {
         // Split by '/' to separate sections
         const sections = docNumber.split('/')
@@ -1015,7 +1028,7 @@ export default class DefineEndpoint {
             .map((revice: any) => {
               const getDocNum =
                 revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
-              const [text, docNum] = getDocNum
+              const [text, docNum = ''] = getDocNum
               return docNum?.trim()
             })
             .filter(Boolean) // Filter out undefined or null values
@@ -1072,6 +1085,23 @@ export default class DefineEndpoint {
                 ik: format2dgt(null),
                 fm: format2dgt(null),
                 revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
+          if (!dataDoc.division_code) {
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/PD.${format2dgt(
+                  highestNumber + 1
+                )}.00.00/${format2dgt(null)}`,
+                pd: format2dgt(highestNumber + 1),
+                ik: format2dgt(null),
+                fm: format2dgt(null),
+                revision: format2dgt(null),
               },
             }
           }
@@ -1315,7 +1345,7 @@ export default class DefineEndpoint {
             .map((revice: any) => {
               const getDocNum =
                 revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
-              const [text, docNum] = getDocNum
+              const [text, docNum = ''] = getDocNum
               return docNum?.trim()
             })
             .filter(Boolean) // Filter out undefined or null values
@@ -1375,6 +1405,22 @@ export default class DefineEndpoint {
                 ik: format2dgt(dataDoc.ik_number),
                 fm: format2dgt(null),
                 revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
+          if (!dataDoc.division_code) {
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumberIk + 1
+                  }.00/${format2dgt(0)}`,
+                pd: format2dgt(procedure_number),
+                ik: format2dgt(highestNumberIk + 1),
+                fm: format2dgt(null),
+                revision: format2dgt(0),
               },
             }
           }
@@ -1649,7 +1695,7 @@ export default class DefineEndpoint {
             .map((revice: any) => {
               const getDocNum =
                 revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
-              const [text, docNum] = getDocNum
+              const [text, docNum = ''] = getDocNum
               return docNum?.trim()
             })
             .filter(Boolean) // Filter out undefined or null values
@@ -1710,6 +1756,25 @@ export default class DefineEndpoint {
                 ik: format2dgt(dataDoc.ik_number),
                 fm: format2dgt(dataDoc.formulir_number),
                 revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
+          if (!dataDoc.division_code) {
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/FM.${format2dgt(
+                  procedure_number
+                )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                  0
+                )}`,
+                pd: format2dgt(procedure_number),
+                ik: format2dgt(ik_number),
+                fm: format2dgt(highestNumber + 1),
+                revision: format2dgt(0),
               },
             }
           }
@@ -2032,7 +2097,7 @@ export default class DefineEndpoint {
             .map((revice: any) => {
               const getDocNum =
                 revice.hasilEvaluasiDanRiwayatPerubahan.toUpperCase().split('DENGAN NOMOR') || []
-              const [text, docNum] = getDocNum
+              const [text, docNum = ''] = getDocNum
               return docNum?.trim()
             })
             .filter(Boolean) // Filter out undefined or null values
@@ -2093,6 +2158,25 @@ export default class DefineEndpoint {
                 ik: format2dgt(dataDoc.ik_number),
                 fm: format2dgt(dataDoc.formulir_number),
                 revision: format2dgt(highestNumberRev + 1),
+              },
+            }
+          }
+
+          if (!dataDoc.division_code) {
+            return {
+              success: true,
+              message: 'Successfully',
+              data: {
+                document_number_old: docNum,
+                document_number: `${dirDiv}/FM.${format2dgt(
+                  procedure_number
+                )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                  0
+                )}`,
+                pd: format2dgt(procedure_number),
+                ik: format2dgt(ik_number),
+                fm: format2dgt(highestNumber + 1),
+                revision: format2dgt(0),
               },
             }
           }
