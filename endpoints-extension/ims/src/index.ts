@@ -3783,40 +3783,45 @@ export default class DefineEndpoint {
         ObsoleteRepo.where('repo_obsolete_submissions.created_by', createdBy)
       }
 
+      let mainQuery: any
+
       if (adventType === 'REPO') {
-        ObsoleteRequest.select('user_pubs.full_name as approved_by')
-          .unionAll(ObsoleteRepo)
-          .unionAll(ObsoleteRepoFromProbis)
+        mainQuery = ObsoleteRequest
+          .select('user_pubs.full_name as approved_by')
+          .unionAll([ObsoleteRepo, ObsoleteRepoFromProbis])
           .where('advent_type', adventType)
       } else if (adventType === 'PROBIS') {
-        ObsoleteRequest.select('user_pubs.full_name as approved_by').where(
-          'document_obsoletes.advent_type',
-          adventType
-        )
+        mainQuery = ObsoleteRequest
+          .select('user_pubs.full_name as approved_by')
+          .where('document_obsoletes.advent_type', adventType)
       } else if (adventType === 'REQUEST') {
-        ObsoleteRequest.select('user_appr.full_name as approved_by').where(
-          'document_obsoletes.advent_type',
-          adventType
-        )
+        mainQuery = ObsoleteRequest
+          .select('user_appr.full_name as approved_by')
+          .where('document_obsoletes.advent_type', adventType)
       } else {
-        ObsoleteRequest.select('user_pubs.full_name as approved_by').unionAll(
-          ObsoleteRepo
-        )
+        mainQuery = ObsoleteRequest
+          .select('user_pubs.full_name as approved_by')
+          .unionAll([ObsoleteRepo])
       }
 
+      // count
       const { count } =
         (await database
-          .from(database.raw(`(${ObsoleteRequest.clone()}) as a`))
+          .from(database.raw(`(${mainQuery.clone()}) as a`))
           .count()
           .first()) || {}
 
+      // pagination
       if (limit && page) {
-        ObsoleteRequest.limit(limit).offset((page - 1) * limit)
+        mainQuery.limit(limit).offset((page - 1) * limit)
       }
       const total_page = limit ? Math.ceil(count / limit) : null
-      const data = await ObsoleteRequest
 
-      // console.log(ObsoleteRequest.toString())
+
+      // final fetch with orderBy applied OUTSIDE the union
+      const data = await database
+        .from(database.raw(`(${mainQuery.clone()}) as a`))
+        .orderBy('created_at', 'desc')
 
       return {
         success: true,
