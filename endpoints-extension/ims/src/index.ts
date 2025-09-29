@@ -1671,7 +1671,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 procedure_number
-              )}.${ik_number}.${highestNumber + 1}/${format2dgt(null)}`,
+              )}.${format2dgt(ik_number)}.${format2dgt(highestNumber + 1)}/${format2dgt(null)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(ik_number),
               fm: format2dgt(highestNumber + 1),
@@ -2072,7 +2072,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 procedure_number
-              )}.${ik_number}.${highestNumber + 1}/${format2dgt(null)}`,
+              )}.${format2dgt(ik_number)}.${format2dgt(highestNumber + 1)}/${format2dgt(null)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(ik_number),
               fm: format2dgt(highestNumber + 1),
@@ -2170,7 +2170,7 @@ export default class DefineEndpoint {
                 document_number_old: docNum,
                 document_number: `${dirDiv}/FM.${format2dgt(
                   procedure_number
-                )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                )}.${format2dgt(ik_number)}.${format2dgt(highestNumber + 1)}/${format2dgt(
                   0
                 )}`,
                 pd: format2dgt(procedure_number),
@@ -2197,7 +2197,7 @@ export default class DefineEndpoint {
               document_number_old: docNum,
               document_number: `${dirDiv}/FM.${format2dgt(
                 procedure_number
-              )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+              )}.${format2dgt(ik_number)}.${format2dgt(highestNumber + 1)}/${format2dgt(
                 1
               )}`,
               pd: format2dgt(procedure_number),
@@ -2311,7 +2311,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${format2dgt(ik_number)}.${formulir_number}/${format2dgt(
+              )}.${format2dgt(ik_number)}.${format2dgt(formulir_number)}/${format2dgt(
                 revisionNumber
               )}`,
               pd: format2dgt(numberProbis),
@@ -2353,7 +2353,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${format2dgt(ik_number)}.${formulir_number}/${format2dgt(
+              )}.${format2dgt(ik_number)}.${format2dgt(formulir_number)}/${format2dgt(
                 revisionNumber
               )}`,
               pd: format2dgt(numberProbis),
