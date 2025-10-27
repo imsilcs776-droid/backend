@@ -3559,6 +3559,24 @@ export default class DefineEndpoint {
           schema: { type: 'string' },
           required: false,
         },
+        {
+          in: 'query',
+          name: 'division',
+          schema: { type: 'number' },
+          required: false,
+        },
+        {
+          in: 'query',
+          name: 'departments',
+          required: false,
+          schema: {
+            type: 'array',
+            items: { type: 'number' },
+          },
+          style: 'form',
+          // explode: false,     // ✅ makes ?departments=1,2,3
+          explode: true,     // ✅ makes ?departments=1,2,3
+        }
       ],
     }
   )
@@ -3574,20 +3592,19 @@ export default class DefineEndpoint {
     @Query('directorate') dir: number,
     @Query('werk_directorate') werkDir: number,
     @Query('level') level: string,
-    @Query('instansi') instansi: string
+    @Query('instansi') instansi: string,
+    @Query('division') div: number,
+    @Query('departments') depts: number[],   // ✅ baru
   ) {
-    const {
-      database,
-      // services: { UsersService },
-    } = ctx
+    const { database } = ctx
+
+    const departments = Array.isArray(depts) ? depts : depts ? [depts] : [];
+    const divisions = Array.isArray(div) ? div : div ? [div] : [];
 
     try {
-      // const { id: userId } = await item.getUser({ req, UsersService })
-
       const ObsoleteRequest = database('document_obsoletes')
         .select(
           'statuses.name as status_name',
-          // 'user_pubs.full_name as approved_by',
           'directus_users.full_name',
           'document_obsoletes.reason_obsolete as reason',
           'document_obsoletes.created_at',
@@ -3598,49 +3615,21 @@ export default class DefineEndpoint {
           'mt_departments.i_com_code as werk_directorate',
           database.raw('CAST(document_metas.level AS varchar) as level'),
           'rep_file_publishers.document_number as replacement_document_number',
-          'rep_document_metas.judul as replacement_title'
+          'rep_document_metas.judul as replacement_title',
+          database.raw('CAST(document_departments.department AS int) as department'),
+          database.raw('user_pubs.full_name as approved_by'),
+          'document_metas.department_division as division'
         )
-        .join(
-          'directus_users',
-          'directus_users.id',
-          'document_obsoletes.created_by'
-        )
-        .join(
-          'file_publishers',
-          'file_publishers.id',
-          'document_obsoletes.file_publisher'
-        )
-        .join(
-          'directus_users as user_pubs',
-          'user_pubs.id',
-          'file_publishers.created_by'
-        )
-        .join(
-          'document_metas',
-          'document_metas.id',
-          'file_publishers.document_meta'
-        )
-        .join(
-          'mt_departments',
-          'mt_departments.id',
-          'document_metas.department_directorat'
-        )
-        .leftJoin(
-          'file_publishers as rep_file_publishers',
-          'rep_file_publishers.id',
-          'document_obsoletes.replacement_file_publisher'
-        )
-        .leftJoin(
-          'document_metas as rep_document_metas',
-          'rep_document_metas.id',
-          'rep_file_publishers.document_meta'
-        )
+        .join('directus_users', 'directus_users.id', 'document_obsoletes.created_by')
+        .join('file_publishers', 'file_publishers.id', 'document_obsoletes.file_publisher')
+        .join('directus_users as user_pubs', 'user_pubs.id', 'file_publishers.created_by')
+        .join('document_metas', 'document_metas.id', 'file_publishers.document_meta')
+        .join('mt_departments', 'mt_departments.id', 'document_metas.department_directorat')
+        .leftJoin('file_publishers as rep_file_publishers', 'rep_file_publishers.id', 'document_obsoletes.replacement_file_publisher')
+        .leftJoin('document_metas as rep_document_metas', 'rep_document_metas.id', 'rep_file_publishers.document_meta')
         .join('statuses', 'statuses.id', 'document_obsoletes.status')
-        .leftJoin(
-          'directus_users as user_appr',
-          'user_appr.id',
-          'document_obsoletes.approved_by'
-        )
+        .leftJoin('directus_users as user_appr', 'user_appr.id', 'document_obsoletes.approved_by')
+        .leftJoin('document_departments', 'document_departments.document_meta', 'document_metas.id')
 
       const ObsoleteRepoFromProbis = database('document_obsoletes')
         .select(
@@ -3652,42 +3641,26 @@ export default class DefineEndpoint {
           'repo_document_submissions.number as document_number',
           'repo_document_submissions.title as title',
           'repo_document_submissions.directorate as directorate',
-          // 'mt_departments.i_com_code as werk_directorate',
           database.raw('CAST(NULL AS varchar) as werk_directorate'),
           database.raw('CAST(repo_type.name_type AS varchar) as level'),
           'rep_file_publishers.document_number as replacement_document_number',
           'rep_document_metas.judul as replacement_title',
-          'directus_users.full_name as approved_by'
+          database.raw('CAST(document_departments.department AS int) as department'),
+          database.raw('user_appr.full_name as approved_by'),
+          'document_metas.department_division as division'
         )
-        .join(
-          'directus_users',
-          'directus_users.id',
-          'document_obsoletes.created_by'
-        )
-        .leftJoin(
-          'file_publishers as rep_file_publishers',
-          'rep_file_publishers.id',
-          'document_obsoletes.replacement_file_publisher'
-        )
-        .leftJoin(
-          'document_metas as rep_document_metas',
-          'rep_document_metas.id',
-          'rep_file_publishers.document_meta'
-        )
+        .join('directus_users', 'directus_users.id', 'document_obsoletes.created_by')
+        .leftJoin('file_publishers as rep_file_publishers', 'rep_file_publishers.id', 'document_obsoletes.replacement_file_publisher')
+        .leftJoin('directus_users as user_appr', 'user_appr.id', 'rep_file_publishers.created_by')
+        .leftJoin('document_metas as rep_document_metas', 'rep_document_metas.id', 'rep_file_publishers.document_meta')
         .join('statuses', 'statuses.id', 'document_obsoletes.status')
-        .leftJoin(
-          'submissions',
-          'submissions.id',
-          'rep_file_publishers.submission'
-        )
-        .leftJoin(
-          'repo_document_submissions',
-          'repo_document_submissions.id',
-          'submissions.repo_revice'
-        )
+        .leftJoin('submissions', 'submissions.id', 'rep_file_publishers.submission')
+        .leftJoin('repo_document_submissions', 'repo_document_submissions.id', 'submissions.repo_revice')
         .leftJoin('repo_type', 'repo_type.id', 'repo_document_submissions.type')
+        .leftJoin('document_departments', 'document_departments.document_meta', 'document_metas.id')
         .where('document_obsoletes.advent_type', adventType)
 
+      // base query
       const ObsoleteRepo = database('repo_obsolete_submissions')
         .select(
           'statuses.name as status_name',
@@ -3702,45 +3675,26 @@ export default class DefineEndpoint {
           'repo_type.name_type as level',
           'rep_repo_document_submissions.number as replacement_document_number',
           'rep_repo_document_submissions.title as replacement_title',
-          'user_asgns.full_name as approved_by'
+          database.raw('CAST(multi_department_repo_document_submissions.department_id AS int) as department'),
+          'user_asgns.full_name as approved_by',
+          'repo_document_submissions.division as division'
         )
-        .join(
-          'directus_users',
-          'directus_users.id',
-          'repo_obsolete_submissions.created_by'
-        )
-        .join(
-          'directus_users as user_asgns',
-          'user_asgns.id',
-          'repo_obsolete_submissions.assigned_to'
-        )
-        /**
-         * find title and number
-         */
-        .join(
-          'repo_document_submissions',
-          'repo_document_submissions.id',
-          'repo_obsolete_submissions.repo_document_submission'
-        )
-        /**
-         *find replacement
-         */
-        .leftJoin(
-          'repo_document_submissions as rep_repo_document_submissions',
-          'rep_repo_document_submissions.id',
-          'repo_document_submissions.revised_with'
-        )
-        /**
-         * find level
-         */
+        .join('directus_users', 'directus_users.id', 'repo_obsolete_submissions.created_by')
+        .join('directus_users as user_asgns', 'user_asgns.id', 'repo_obsolete_submissions.assigned_to')
+        .join('repo_document_submissions', 'repo_document_submissions.id', 'repo_obsolete_submissions.repo_document_submission')
+        .leftJoin('repo_document_submissions as rep_repo_document_submissions', 'rep_repo_document_submissions.id', 'repo_document_submissions.revised_with')
         .join('repo_type', 'repo_type.id', 'repo_document_submissions.type')
-        .join(
-          'mt_departments',
-          'mt_departments.id',
-          'repo_document_submissions.directorate'
-        )
+        .join('mt_departments', 'mt_departments.id', 'repo_document_submissions.directorate')
         .join('statuses', 'statuses.id', 'repo_obsolete_submissions.status')
+        // 👇 default LEFT JOIN, akan berubah jadi INNER JOIN jika ada filter departments
+        .leftJoin(
+          'multi_department_repo_document_submissions',
+          'multi_department_repo_document_submissions.repo_submission_id',
+          'repo_document_submissions.id'
+        )
 
+
+      // ====== FILTERS ======
       if (dir) {
         ObsoleteRequest.where('document_metas.department_directorat', dir)
         ObsoleteRepo.where('repo_document_submissions.directorate', dir)
@@ -3767,6 +3721,23 @@ export default class DefineEndpoint {
         ObsoleteRepo.where('repo_document_submissions.instansi', instansi)
       }
 
+      if (departments) {
+        const deptList = departments.filter((d) => !!d)
+
+        if (deptList.length > 0) {
+          ObsoleteRequest.whereIn('document_departments.department', deptList)
+          ObsoleteRepo.whereIn('multi_department_repo_document_submissions.department_id', deptList)
+          ObsoleteRepoFromProbis.whereIn('document_departments.department', deptList)
+        }
+      }
+
+      if (divisions) {
+        // ✅ Tambah filter division
+        ObsoleteRequest.whereIn('document_metas.department_division', divisions)
+        ObsoleteRepo.whereIn('repo_document_submissions.division', divisions)
+        ObsoleteRepoFromProbis.whereIn('document_metas.department_division', divisions)
+      }
+
       if (query) {
         ObsoleteRequest.where((qb: any) => {
           qb.where('document_metas.judul', 'ilike', `%${query}%`)
@@ -3783,42 +3754,34 @@ export default class DefineEndpoint {
         ObsoleteRepo.where('repo_obsolete_submissions.created_by', createdBy)
       }
 
+      // ====== MAIN QUERY ======
       let mainQuery: any
-
       if (adventType === 'REPO') {
         mainQuery = ObsoleteRequest
-          .select('user_pubs.full_name as approved_by')
           .unionAll([ObsoleteRepo, ObsoleteRepoFromProbis])
           .where('advent_type', adventType)
       } else if (adventType === 'PROBIS') {
         mainQuery = ObsoleteRequest
-          .select('user_pubs.full_name as approved_by')
           .where('document_obsoletes.advent_type', adventType)
       } else if (adventType === 'REQUEST') {
         mainQuery = ObsoleteRequest
-          .select('user_appr.full_name as approved_by')
           .where('document_obsoletes.advent_type', adventType)
       } else {
         mainQuery = ObsoleteRequest
-          .select('user_pubs.full_name as approved_by')
           .unionAll([ObsoleteRepo])
       }
 
-      // count
       const { count } =
         (await database
           .from(database.raw(`(${mainQuery.clone()}) as a`))
           .count()
           .first()) || {}
 
-      // pagination
       if (limit && page) {
         mainQuery.limit(limit).offset((page - 1) * limit)
       }
+
       const total_page = limit ? Math.ceil(count / limit) : null
-
-
-      // final fetch with orderBy applied OUTSIDE the union
       const data = await database
         .from(database.raw(`(${mainQuery.clone()}) as a`))
         .orderBy('created_at', 'desc')
@@ -3842,6 +3805,7 @@ export default class DefineEndpoint {
       }
     }
   }
+
 
   @Get(
     {
