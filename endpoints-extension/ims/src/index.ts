@@ -3647,7 +3647,7 @@ export default class DefineEndpoint {
           'rep_document_metas.judul as replacement_title',
           database.raw('CAST(document_departments.department AS int) as department'),
           database.raw('user_appr.full_name as approved_by'),
-          'document_metas.department_division as division'
+          'rep_document_metas.department_division as division'
         )
         .join('directus_users', 'directus_users.id', 'document_obsoletes.created_by')
         .leftJoin('file_publishers as rep_file_publishers', 'rep_file_publishers.id', 'document_obsoletes.replacement_file_publisher')
@@ -3657,7 +3657,7 @@ export default class DefineEndpoint {
         .leftJoin('submissions', 'submissions.id', 'rep_file_publishers.submission')
         .leftJoin('repo_document_submissions', 'repo_document_submissions.id', 'submissions.repo_revice')
         .leftJoin('repo_type', 'repo_type.id', 'repo_document_submissions.type')
-        .leftJoin('document_departments', 'document_departments.document_meta', 'document_metas.id')
+        .leftJoin('document_departments', 'document_departments.document_meta', 'rep_document_metas.id')
         .where('document_obsoletes.advent_type', adventType)
 
       // base query
@@ -3732,10 +3732,13 @@ export default class DefineEndpoint {
       }
 
       if (divisions) {
+        const dvList = divisions.filter((d) => !!d)
         // ✅ Tambah filter division
-        ObsoleteRequest.whereIn('document_metas.department_division', divisions)
-        ObsoleteRepo.whereIn('repo_document_submissions.division', divisions)
-        ObsoleteRepoFromProbis.whereIn('document_metas.department_division', divisions)
+        if (dvList.length > 0) {
+          ObsoleteRequest.whereIn('document_metas.department_division', dvList)
+          ObsoleteRepo.whereIn('repo_document_submissions.division', dvList)
+          ObsoleteRepoFromProbis.whereIn('rep_document_metas.department_division', dvList)
+        }
       }
 
       if (query) {
