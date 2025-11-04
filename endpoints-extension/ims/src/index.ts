@@ -1319,8 +1319,8 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumberIk + 1
-                }.00/${format2dgt(null)}`,
+              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${format2dgt(highestNumberIk + 1
+              )}.00/${format2dgt(null)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(highestNumberIk + 1),
               fm: format2dgt(null),
@@ -1415,7 +1415,7 @@ export default class DefineEndpoint {
               message: 'Successfully',
               data: {
                 document_number_old: docNum,
-                document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumberIk + 1
+                document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${format2dgt(highestNumberIk + 1)
                   }.00/${format2dgt(0)}`,
                 pd: format2dgt(procedure_number),
                 ik: format2dgt(highestNumberIk + 1),
@@ -1439,7 +1439,7 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: docNum,
-              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${highestNumberIk + 1
+              document_number: `${dirDiv}/IK.${format2dgt(procedure_number)}.${format2dgt(highestNumberIk + 1)
                 }.00/${format2dgt(1)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(highestNumberIk + 1),
@@ -1525,7 +1525,7 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(numberProbis)}.${highestNumberIk + 1
+              document_number: `${dirDiv}/IK.${format2dgt(numberProbis)}.${format2dgt(highestNumberIk + 1)
                 }.00/${format2dgt(1)}`,
               pd: format2dgt(numberProbis),
               ik: format2dgt(highestNumberIk + 1),
@@ -1592,7 +1592,7 @@ export default class DefineEndpoint {
             message: 'Successfully',
             data: {
               document_number_old: documentnumberOld,
-              document_number: `${dirDiv}/IK.${format2dgt(numberProbis)}.${highestNumberIk + 1
+              document_number: `${dirDiv}/IK.${format2dgt(numberProbis)}.${format2dgt(highestNumberIk + 1)
                 }.00/${format2dgt(1)}`,
               pd: format2dgt(numberProbis),
               ik: format2dgt(highestNumberIk + 1),
@@ -1768,7 +1768,7 @@ export default class DefineEndpoint {
                 document_number_old: docNum,
                 document_number: `${dirDiv}/FM.${format2dgt(
                   procedure_number
-                )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+                )}.${format2dgt(ik_number)}.${format2dgt(highestNumber + 1)}/${format2dgt(
                   0
                 )}`,
                 pd: format2dgt(procedure_number),
@@ -1795,7 +1795,7 @@ export default class DefineEndpoint {
               document_number_old: docNum,
               document_number: `${dirDiv}/FM.${format2dgt(
                 procedure_number
-              )}.${ik_number}.${format2dgt(highestNumber + 1)}/${format2dgt(
+              )}.${format2dgt(ik_number)}.${format2dgt(highestNumber + 1)}/${format2dgt(
                 1
               )}`,
               pd: format2dgt(procedure_number),
@@ -1916,7 +1916,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
+              )}.${format2dgt(numberIk)}.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
               pd: format2dgt(procedure_number),
               ik: format2dgt(ik_number),
               fm: format2dgt(highestNumber + 1),
@@ -1994,7 +1994,7 @@ export default class DefineEndpoint {
               document_number_old: documentnumberOld,
               document_number: `${dirDiv}/FM.${format2dgt(
                 numberProbis
-              )}.${numberIk}.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
+              )}.${format2dgt(numberIk)}.${format2dgt(highestNumber + 1)}/${format2dgt(1)}`,
               pd: format2dgt(numberProbis),
               ik: format2dgt(numberIk),
               fm: format2dgt(highestNumber + 1),
@@ -3567,6 +3567,30 @@ export default class DefineEndpoint {
         },
         {
           in: 'query',
+          name: 'units',
+          required: false,
+          schema: {
+            type: 'array',
+            items: { type: 'number' },
+          },
+          style: 'form',
+          // explode: false,     // ✅ makes ?departments=1,2,3
+          explode: true,     // ✅ makes ?departments=1,2,3
+        },
+        {
+          in: 'query',
+          name: 'applicable_for',
+          required: false,
+          schema: {
+            type: 'array',
+            items: { type: 'number' },
+          },
+          style: 'form',
+          // explode: false,     // ✅ makes ?departments=1,2,3
+          explode: true,     // ✅ makes ?departments=1,2,3
+        },
+        {
+          in: 'query',
           name: 'departments',
           required: false,
           schema: {
@@ -3594,12 +3618,16 @@ export default class DefineEndpoint {
     @Query('level') level: string,
     @Query('instansi') instansi: string,
     @Query('division') div: number,
-    @Query('departments') depts: number[],   // ✅ baru
+    @Query('departments') depts: number[],
+    @Query('units') unts: number[],
+    @Query('applicable_for') appFor: number[],
   ) {
     const { database } = ctx
 
     const departments = Array.isArray(depts) ? depts : depts ? [depts] : [];
     const divisions = Array.isArray(div) ? div : div ? [div] : [];
+    const units = Array.isArray(unts) ? unts : unts ? [unts] : [];
+    const applicableFor = Array.isArray(appFor) ? appFor : appFor ? [appFor] : [];
 
     try {
       const ObsoleteRequest = database('document_obsoletes')
@@ -3618,7 +3646,8 @@ export default class DefineEndpoint {
           'rep_document_metas.judul as replacement_title',
           database.raw('CAST(document_departments.department AS int) as department'),
           database.raw('user_pubs.full_name as approved_by'),
-          'document_metas.department_division as division'
+          'document_metas.department_division as division',
+          'document_units.unit as unit'
         )
         .join('directus_users', 'directus_users.id', 'document_obsoletes.created_by')
         .join('file_publishers', 'file_publishers.id', 'document_obsoletes.file_publisher')
@@ -3630,6 +3659,7 @@ export default class DefineEndpoint {
         .join('statuses', 'statuses.id', 'document_obsoletes.status')
         .leftJoin('directus_users as user_appr', 'user_appr.id', 'document_obsoletes.approved_by')
         .leftJoin('document_departments', 'document_departments.document_meta', 'document_metas.id')
+        .leftJoin('document_units', 'document_units.document_meta', 'document_metas.id')
 
       const ObsoleteRepoFromProbis = database('document_obsoletes')
         .select(
@@ -3638,16 +3668,17 @@ export default class DefineEndpoint {
           'document_obsoletes.reason_obsolete as reason',
           'document_obsoletes.created_at',
           'document_obsoletes.advent_type',
-          'repo_document_submissions.number as document_number',
+          'repo_document_submissions.number as document_number', // yang digantikan
           'repo_document_submissions.title as title',
           'repo_document_submissions.directorate as directorate',
           database.raw('CAST(NULL AS varchar) as werk_directorate'),
           database.raw('CAST(repo_type.name_type AS varchar) as level'),
-          'rep_file_publishers.document_number as replacement_document_number',
+          'rep_file_publishers.document_number as replacement_document_number', // pengganti
           'rep_document_metas.judul as replacement_title',
-          database.raw('CAST(document_departments.department AS int) as department'),
+          database.raw('CAST(multi_department_repo_document_submissions.department_id AS int) as department'),
           database.raw('user_appr.full_name as approved_by'),
-          'rep_document_metas.department_division as division'
+          'repo_document_submissions.division as division',
+          'repo_document_submission_units.unit as unit'
         )
         .join('directus_users', 'directus_users.id', 'document_obsoletes.created_by')
         .leftJoin('file_publishers as rep_file_publishers', 'rep_file_publishers.id', 'document_obsoletes.replacement_file_publisher')
@@ -3656,9 +3687,16 @@ export default class DefineEndpoint {
         .join('statuses', 'statuses.id', 'document_obsoletes.status')
         .leftJoin('submissions', 'submissions.id', 'rep_file_publishers.submission')
         .leftJoin('repo_document_submissions', 'repo_document_submissions.id', 'submissions.repo_revice')
+        .leftJoin('repo_document_submission_units', 'repo_document_submission_units.repo_document_submission', 'repo_document_submissions.id')
         .leftJoin('repo_type', 'repo_type.id', 'repo_document_submissions.type')
-        .leftJoin('document_departments', 'document_departments.document_meta', 'rep_document_metas.id')
-        .where('document_obsoletes.advent_type', adventType)
+        // ambil departemen dari dokumen repo yang digantikan
+        .leftJoin(
+          'multi_department_repo_document_submissions',
+          'multi_department_repo_document_submissions.repo_submission_id',
+          'repo_document_submissions.id'
+        )
+        .whereNotNull('document_obsoletes.replacement_file_publisher') // pastikan ada pengganti
+
 
       // base query
       const ObsoleteRepo = database('repo_obsolete_submissions')
@@ -3677,21 +3715,18 @@ export default class DefineEndpoint {
           'rep_repo_document_submissions.title as replacement_title',
           database.raw('CAST(multi_department_repo_document_submissions.department_id AS int) as department'),
           'user_asgns.full_name as approved_by',
-          'repo_document_submissions.division as division'
+          'repo_document_submissions.division as division',
+          'repo_document_submission_units.unit as unit'
         )
         .join('directus_users', 'directus_users.id', 'repo_obsolete_submissions.created_by')
-        .join('directus_users as user_asgns', 'user_asgns.id', 'repo_obsolete_submissions.assigned_to')
+        .leftJoin('directus_users as user_asgns', 'user_asgns.id', 'repo_obsolete_submissions.assigned_to') // ✅ ubah ke left
         .join('repo_document_submissions', 'repo_document_submissions.id', 'repo_obsolete_submissions.repo_document_submission')
+        .leftJoin('repo_document_submission_units', 'repo_document_submission_units.repo_document_submission', 'repo_document_submissions.id')
         .leftJoin('repo_document_submissions as rep_repo_document_submissions', 'rep_repo_document_submissions.id', 'repo_document_submissions.revised_with')
         .join('repo_type', 'repo_type.id', 'repo_document_submissions.type')
-        .join('mt_departments', 'mt_departments.id', 'repo_document_submissions.directorate')
+        .leftJoin('mt_departments', 'mt_departments.id', 'repo_document_submissions.directorate') // ✅ ubah ke left untuk safety
         .join('statuses', 'statuses.id', 'repo_obsolete_submissions.status')
-        // 👇 default LEFT JOIN, akan berubah jadi INNER JOIN jika ada filter departments
-        .leftJoin(
-          'multi_department_repo_document_submissions',
-          'multi_department_repo_document_submissions.repo_submission_id',
-          'repo_document_submissions.id'
-        )
+        .leftJoin('multi_department_repo_document_submissions', 'multi_department_repo_document_submissions.repo_submission_id', 'repo_document_submissions.id')
 
 
       // ====== FILTERS ======
@@ -3717,7 +3752,7 @@ export default class DefineEndpoint {
 
       if (instansi) {
         ObsoleteRequest.where('document_metas.com_code', instansi)
-        ObsoleteRepoFromProbis.where('rep_document_metas.com_code', instansi)
+        ObsoleteRepoFromProbis.where('repo_document_submissions.instansi', instansi)
         ObsoleteRepo.where('repo_document_submissions.instansi', instansi)
       }
 
@@ -3727,7 +3762,7 @@ export default class DefineEndpoint {
         if (deptList.length > 0) {
           ObsoleteRequest.whereIn('document_departments.department', deptList)
           ObsoleteRepo.whereIn('multi_department_repo_document_submissions.department_id', deptList)
-          ObsoleteRepoFromProbis.whereIn('document_departments.department', deptList)
+          ObsoleteRepoFromProbis.whereIn('multi_department_repo_document_submissions.department_id', departments)
         }
       }
 
@@ -3737,7 +3772,21 @@ export default class DefineEndpoint {
         if (dvList.length > 0) {
           ObsoleteRequest.whereIn('document_metas.department_division', dvList)
           ObsoleteRepo.whereIn('repo_document_submissions.division', dvList)
-          ObsoleteRepoFromProbis.whereIn('rep_document_metas.department_division', dvList)
+          ObsoleteRepoFromProbis.whereIn('repo_document_submissions.division', divisions)
+        }
+      }
+
+      if (units) {
+        const unitList = units.filter((u) => !!u)
+        if (unitList.length > 0) {
+          // Untuk PROBIS dan REQUEST (document_metas)
+          ObsoleteRequest.whereIn('document_units.unit', unitList)
+
+          // Untuk REPO langsung dari tabel repo_document_submission_units
+          ObsoleteRepo.whereIn('repo_document_submission_units.unit', unitList)
+
+          // Untuk yang digantikan (repo probis yang di-obsolete-kan)
+          ObsoleteRepoFromProbis.whereIn('repo_document_submission_units.unit', unitList)
         }
       }
 
@@ -3750,6 +3799,10 @@ export default class DefineEndpoint {
           qb.where('repo_document_submissions.title', 'ilike', `%${query}%`)
           qb.orWhere('repo_document_submissions.number', 'ilike', `%${query}%`)
         })
+        ObsoleteRepoFromProbis.where((qb: any) => {
+          qb.where('repo_document_submissions.title', 'ilike', `%${query}%`)
+            .orWhere('repo_document_submissions.number', 'ilike', `%${query}%`)
+        })
       }
 
       if (createdBy) {
@@ -3759,13 +3812,13 @@ export default class DefineEndpoint {
 
       // ====== MAIN QUERY ======
       let mainQuery: any
-      if (adventType === 'REPO') {
+      if (adventType === 'REPO' || adventType === 'PROBIS') {
         mainQuery = ObsoleteRequest
           .unionAll([ObsoleteRepo, ObsoleteRepoFromProbis])
-          .where('advent_type', adventType)
-      } else if (adventType === 'PROBIS') {
-        mainQuery = ObsoleteRequest
-          .where('document_obsoletes.advent_type', adventType)
+          .whereIn('advent_type', ['REPO', 'PROBIS'])
+        // } else if (adventType === 'PROBIS') {
+        //   mainQuery = ObsoleteRequest
+        //     .where('document_obsoletes.advent_type', adventType)
       } else if (adventType === 'REQUEST') {
         mainQuery = ObsoleteRequest
           .where('document_obsoletes.advent_type', adventType)
@@ -3774,20 +3827,34 @@ export default class DefineEndpoint {
           .unionAll([ObsoleteRepo])
       }
 
-      const { count } =
-        (await database
-          .from(database.raw(`(${mainQuery.clone()}) as a`))
-          .count()
-          .first()) || {}
-
-      if (limit && page) {
-        mainQuery.limit(limit).offset((page - 1) * limit)
-      }
-
-      const total_page = limit ? Math.ceil(count / limit) : null
-      const data = await database
-        .from(database.raw(`(${mainQuery.clone()}) as a`))
+      const finalQuery = database
+        .select('*')
+        .from(
+          database
+            .select(
+              '*',
+              database.raw(`ROW_NUMBER() OVER (PARTITION BY document_number ORDER BY created_at DESC) AS rn`)
+            )
+            .from(mainQuery.as('combined')) // << di sini baru kasih alias
+            .as('ranked')
+        )
+        .where('rn', 1)
         .orderBy('created_at', 'desc')
+
+      // count
+      const countResult = await database
+        .from(database.raw(`(${finalQuery.clone()}) as a`))
+        .count({ total: '*' })
+        .first()
+      const total_count = Number(countResult?.total ?? 0)
+
+      const safePage = Math.max(Number(page) || 1, 1)
+      const safeLimit = Math.max(Number(limit) || 10, 1)
+
+      finalQuery.limit(safeLimit).offset((safePage - 1) * safeLimit)
+
+      // ambil data (gunakan finalQuery langsung)
+      const data = await finalQuery
 
       return {
         success: true,
@@ -3796,8 +3863,8 @@ export default class DefineEndpoint {
         meta: {
           page,
           limit,
-          total_count: Number(count),
-          total_page,
+          total_count: Number(total_count),
+          total_page: safeLimit ? Math.ceil(total_count / safeLimit) : null,
         },
       }
     } catch (error: any) {
