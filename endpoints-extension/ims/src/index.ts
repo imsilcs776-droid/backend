@@ -3230,6 +3230,25 @@ export default class DefineEndpoint {
         UsersService,
       })
 
+      // ✅ 4. NEW: Permit by global role
+      const hasGlobalRole = await database('Privileges as p')
+        .whereExists(function (qb: any) {
+          qb.select(1)
+            .from('document_permit_roles as r')
+            .whereRaw('r.role = p.role')
+        })
+        .andWhere('p.user', userId)
+        .first()
+
+      if (hasGlobalRole) {
+        return {
+          success: true,
+          message: 'Successfully check',
+          data: { permit: true },
+          meta: { description: 'permit by global role' },
+        }
+      }
+
       const filePubId = await database('file_publishers')
         .select('file_publishers.id')
         .join('document_departments', 'document_departments.submission', 'file_publishers.submission')
