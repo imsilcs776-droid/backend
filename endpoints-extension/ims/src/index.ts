@@ -4968,32 +4968,49 @@ export default class DefineEndpoint {
       nip_new: nippNew,
       department: myDepartment,
       instansi,
+      i_werk
     } = await item.getUser({
       req,
       UsersService,
     })
     try {
       if (!nippNew) throw new Error('NIPP not found')
+      if (!instansi) throw new Error('instansi not found')
+      if (!i_werk) throw new Error('Unit Kerja not found')
 
-      const depCodes =
-        (await database('mt_sisman_grups')
-          .select('kd_div')
-          .where('grup', instansi)) || []
 
-      const sismans = await database('directus_users')
+      const dhQuery = database('mt_sisman_grups as a')
+        .join('directus_users as b', 'b.id', 'a.dh_sisman')
         .select(
-          'directus_users.full_name',
-          'directus_users.id',
-          'directus_users.instansi',
-          'directus_users.pegawai'
+          'b.full_name',
+          'b.id',
+          'b.instansi',
+          'b.pegawai',
+          'a.i_com_code',
+          'a.kd_div',
+          'a.kd_wil',
+          database.raw(`'dh_sisman' as type`)
         )
-        .where('directus_users.source', 'PEO')
-        // .where('directus_users.instansi', instansi)
-        .where('directus_users.is_active', true)
-        .whereIn(
-          'directus_users.i_kd_div',
-          depCodes.map((d: any) => d.kd_div)
+        .where('a.grup', instansi)
+        .andWhere('a.i_com_code', String(i_werk))
+
+      const staffQuery = database('mt_sisman_grups as a')
+        .join('mt_sisman_grups_directus_users as c', 'c.mt_sisman_grups_id', 'a.id')
+        .join('directus_users as d', 'd.id', 'c.directus_users_id')
+        .select(
+          'd.full_name',
+          'd.id',
+          'd.instansi',
+          'd.pegawai',
+          'a.i_com_code',
+          'a.kd_div',
+          'a.kd_wil',
+          database.raw(`'staff_sisman' as type`)
         )
+        .where('a.grup', instansi)
+        .andWhere('a.i_com_code', String(i_werk))
+
+      const sismans = await dhQuery.unionAll(staffQuery)
       return {
         data: sismans,
         meta: { me: { full_name, nippNew, myDepartment, instansi } },
