@@ -308,6 +308,7 @@ export default class DefineEndpoint {
       }
 
       console.log(submissionsQuery.toString())
+      submissionsQuery.orderBy('submissions.date_created', 'asc')
       const { count } =
         (await database
           .from(database.raw(`(${submissionsQuery.clone()}) as a`))
