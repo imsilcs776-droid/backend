@@ -3677,7 +3677,7 @@ export default class DefineEndpoint {
         .leftJoin('file_publishers as rep_file_publishers', 'rep_file_publishers.id', 'document_obsoletes.replacement_file_publisher')
         .leftJoin('document_metas as rep_document_metas', 'rep_document_metas.id', 'rep_file_publishers.document_meta')
         .join('statuses', 'statuses.id', 'document_obsoletes.status')
-        .leftJoin('directus_users as user_appr', 'user_appr.id', 'document_obsoletes.approved_by')
+        .leftJoin('directus_users as user_appr', 'user_appr.id', 'document_obsoletes.next_approver')
         .leftJoin('document_departments', 'document_departments.document_meta', 'document_metas.id')
         .leftJoin('document_units', 'document_units.document_meta', 'document_metas.id')
 
