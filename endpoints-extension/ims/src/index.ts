@@ -5029,6 +5029,101 @@ export default class DefineEndpoint {
 
   @Get(
     {
+      path: '/recomendation-assesor/gh-sisman',
+      tag: 'IMS/file-publisers',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async recomendationAssesorGhSisman(@Context() ctx: any, @Req() req: any) {
+    const {
+      services: { UsersService },
+      database,
+    } = ctx
+    const {
+      full_name,
+      nip_new: nippNew,
+      department: myDepartment,
+      instansi,
+      i_werk
+    } = await item.getUser({
+      req,
+      UsersService,
+    })
+    try {
+      if (!nippNew) throw new Error('NIPP not found')
+      if (!instansi) throw new Error('instansi not found')
+      if (!i_werk) throw new Error('Unit Kerja not found')
+
+
+      /** GH SISMAN */
+      const ghQuery = database('mt_sisman_grups as a')
+        .join('directus_users as g', 'g.id', 'a.gh_sisman')
+        .select(
+          'g.full_name',
+          'g.id',
+          'g.instansi',
+          'g.pegawai',
+          'a.i_com_code',
+          'a.kd_div',
+          'a.kd_wil',
+          database.raw(`'gh_sisman' as type`)
+        )
+        .where('a.grup', instansi)
+        .where('a.i_com_code', String(i_werk))
+
+      /** STAFF SISMAN */
+      const staffQuery = database('mt_sisman_grups as a')
+        .join('mt_sisman_grups_directus_users as c', 'c.mt_sisman_grups_id', 'a.id')
+        .join('directus_users as d', 'd.id', 'c.directus_users_id')
+        .select(
+          'd.full_name',
+          'd.id',
+          'd.instansi',
+          'd.pegawai',
+          'a.i_com_code',
+          'a.kd_div',
+          'a.kd_wil',
+          database.raw(`'staff_sisman' as type`)
+        )
+        .where('a.grup', instansi)
+        .where('a.i_com_code', String(i_werk))
+
+      /** COMBINE 3 QUERY */
+      const sismans = await ghQuery.unionAll(staffQuery)
+      return {
+        data: sismans,
+        meta: { me: { full_name, nippNew, myDepartment, instansi } },
+        success: true,
+        message: 'Successfully Get recomendation',
+      }
+    } catch (error: any) {
+      console.log(error)
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    {
       path: '/dashboard/probis',
       tag: 'IMS/dasboard',
     },
