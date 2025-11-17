@@ -3665,7 +3665,7 @@ export default class DefineEndpoint {
           'rep_file_publishers.document_number as replacement_document_number',
           'rep_document_metas.judul as replacement_title',
           database.raw('CAST(document_departments.department AS int) as department'),
-          database.raw('user_pubs.full_name as approved_by'),
+          database.raw('user_appr.full_name as approved_by'),
           'document_metas.department_division as division',
           'document_units.unit as unit'
         )
