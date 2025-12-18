@@ -926,8 +926,8 @@ export default class DefineEndpoint {
       FORMULIR_NO_IK = 55,
     }
     try {
-      const { data: submissionData, id, repo_revice, submission_revice } = (await database('submissions')
-        .select('data', 'id', 'repo_revice', 'submission_revice')
+      const { data: submissionData, id, repo_revice, submission_revice, com_code } = (await database('submissions')
+        .select('data', 'id', 'repo_revice', 'submission_revice', 'com_code')
         .where('submissions.id', submissionId)
         .first()) || { data: {} }
 
@@ -967,6 +967,7 @@ export default class DefineEndpoint {
           .join('submissions', 'submissions.id', 'file_publishers.submission')
           .whereNull('file_publishers.deleted_at')
           .where('submissions.business', business_id)
+          .where('submissions.com_code', com_code)
           .where('file_publishers.document_number', 'like', '%PD%')
           .where('file_publishers.document_number', 'like', div + '%')
 
@@ -976,6 +977,7 @@ export default class DefineEndpoint {
           })
           .where('repo_document_submissions.number', 'like', '%PD%')
           .where('repo_document_submissions.number', 'like', div + '%')
+          .where('repo_document_submissions.instansi', com_code)
 
         const { max_count } = (await countQuery.first()) || { max_count: 0 }
 
@@ -1068,6 +1070,7 @@ export default class DefineEndpoint {
                 'like',
                 dataDoc.division_code + '%'
               )
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
 
             const highestNumberRev = Math.max(
@@ -1194,6 +1197,7 @@ export default class DefineEndpoint {
             .where('file_publishers.procedure_number', numberProbis)
             .where('file_publishers.document_number', 'like', '%PD%')
             .where('file_publishers.document_number', 'like', div + '%')
+            .where('submissions.com_code', com_code)
             .groupBy('file_publishers.procedure_number')
             .first()) || { maxRevision: 0 }
           revisionNumber = maxRevision + 1
@@ -1231,6 +1235,7 @@ export default class DefineEndpoint {
             .whereNull('file_publishers.deleted_at')
             .where('submissions.business', business_id)
             .where('file_publishers.procedure_number', numberProbis)
+            .where('submissions.com_code', com_code)
             .where('file_publishers.document_number', 'like', '%PD%')
             .where('file_publishers.document_number', 'like', div + '%')
             .groupBy('file_publishers.procedure_number')
@@ -1282,6 +1287,7 @@ export default class DefineEndpoint {
           .where('file_publishers.document_number', 'like', '%IK%')
           .where('file_publishers.document_number', 'like', div + '%')
           .where('file_publishers.procedure_number', procedure_number)
+          .where('submissions.com_code', com_code)
 
         // console.log('DISINI', procedure_number, dirDiv, countQuery.toString())
 
@@ -1292,6 +1298,7 @@ export default class DefineEndpoint {
           .where('repo_document_submissions.number', 'like', '%IK%')
           .where('repo_document_submissions.number', 'like', div + '%')
           .where('repo_document_submissions.number_in_pd', procedure_number)
+          .where('repo_document_submissions.instansi', com_code)
 
         const { max_count } = (await countQuery.first()) || {
           max_count: 0,
@@ -1386,6 +1393,7 @@ export default class DefineEndpoint {
                 'like',
                 dataDoc.division_code + '%'
               )
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
 
             const highestNumberRev = Math.max(
@@ -1492,6 +1500,7 @@ export default class DefineEndpoint {
               .where('file_publishers.ik_number', ik_number)
               .where('file_publishers.document_number', 'like', '%IK%')
               .where('file_publishers.document_number', 'like', div + '%')
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
             revisionNumber = maxRevision + 1
             console.log('MX', maxRevision)
@@ -1560,6 +1569,7 @@ export default class DefineEndpoint {
               .where('file_publishers.ik_number', max_count)
               .where('file_publishers.document_number', 'like', '%IK%')
               .where('file_publishers.document_number', 'like', div + '%')
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
             console.log('MX revisi repo', maxRevision)
 
@@ -1632,6 +1642,7 @@ export default class DefineEndpoint {
           .where('file_publishers.document_number', 'like', div + '%')
           .where('file_publishers.procedure_number', procedure_number)
           .where('file_publishers.ik_number', ik_number)
+          .where('submissions.com_code', com_code)
 
         repoCountQuery = database('repo_document_submissions')
           .max('repo_document_submissions.number_in_fm', {
@@ -1641,6 +1652,7 @@ export default class DefineEndpoint {
           .where('repo_document_submissions.number', 'like', div + '%')
           .where('repo_document_submissions.number_in_pd', procedure_number)
           .where('repo_document_submissions.number_in_ik', ik_number)
+          .where('repo_document_submissions.instansi', com_code)
 
         const { max_count } = (await countQuery.first()) || {
           max_count: 0,
@@ -1737,6 +1749,7 @@ export default class DefineEndpoint {
                 dataDoc.division_code + '%'
               )
               .where('file_publishers.formulir_number', dataDoc.formulir_number)
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
 
             const highestNumberRev = Math.max(
@@ -1879,6 +1892,7 @@ export default class DefineEndpoint {
               .where('file_publishers.formulir_number', formulir_number)
               .where('file_publishers.document_number', 'like', '%FM%')
               .where('file_publishers.document_number', 'like', div + '%')
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
             revisionNumber = maxRevision + 1
             console.log('MX', maxRevision)
@@ -1951,6 +1965,7 @@ export default class DefineEndpoint {
               .where('file_publishers.formulir_number', numberForm)
               .where('file_publishers.document_number', 'like', '%FM%')
               .where('file_publishers.document_number', 'like', div + '%')
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
             revisionNumber = maxRevision + 1
             console.log(
@@ -2033,6 +2048,7 @@ export default class DefineEndpoint {
           .where('file_publishers.document_number', 'like', div + '%')
           .where('file_publishers.procedure_number', procedure_number)
           .where('file_publishers.ik_number', 0)
+          .where('submissions.com_code', com_code)
 
         repoCountQuery = database('repo_document_submissions')
           .max('repo_document_submissions.number_in_fm', {
@@ -2042,6 +2058,7 @@ export default class DefineEndpoint {
           .where('repo_document_submissions.number', 'like', div + '%')
           .where('repo_document_submissions.number_in_pd', procedure_number)
           .where('repo_document_submissions.number_in_ik', 0)
+          .where('repo_document_submissions.instansi', com_code)
 
         const { max_count } = (await countQuery.first()) || {
           max_count: 0,
@@ -2139,6 +2156,7 @@ export default class DefineEndpoint {
                 dataDoc.division_code + '%'
               )
               .where('file_publishers.formulir_number', dataDoc.formulir_number)
+              .where('submissions.com_code', com_code)
               .first()) || { maxRevision: 0 }
 
             const highestNumberRev = Math.max(
@@ -2301,6 +2319,7 @@ export default class DefineEndpoint {
             .where('file_publishers.formulir_number', formulir_number)
             .where('file_publishers.document_number', 'like', '%FM%')
             .where('file_publishers.document_number', 'like', div + '%')
+            .where('submissions.com_code', com_code)
             .first()) || { maxRevision: 0 }
           revisionNumber = maxRevision + 1
           console.log('MX', maxRevision)
@@ -2343,6 +2362,7 @@ export default class DefineEndpoint {
             .where('file_publishers.formulir_number', formulir_number)
             .where('file_publishers.document_number', 'like', '%FM%')
             .where('file_publishers.document_number', 'like', div + '%')
+            .where('submissions.com_code', com_code)
             .first()) || { maxRevision: 0 }
           revisionNumber = maxRevision + 1
           console.log('MX revisi repo', maxRevision)
