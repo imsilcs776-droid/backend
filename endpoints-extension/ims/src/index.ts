@@ -3852,13 +3852,14 @@ export default class DefineEndpoint {
 
       // ====== MAIN QUERY ======
       let mainQuery: any
-      if (adventType === 'REPO' || adventType === 'PROBIS') {
+      if (adventType === 'REPO') {
         mainQuery = ObsoleteRequest
-          .unionAll([ObsoleteRepo, ObsoleteRepoFromProbis])
-          .whereIn('advent_type', ['REPO', 'PROBIS'])
-        // } else if (adventType === 'PROBIS') {
-        //   mainQuery = ObsoleteRequest
-        //     .where('document_obsoletes.advent_type', adventType)
+          .unionAll([ObsoleteRepo])
+          .whereIn('advent_type', ['REPO'])
+      } else if (adventType === 'PROBIS') {
+        mainQuery = ObsoleteRequest
+          .unionAll([ObsoleteRepoFromProbis])
+          .whereIn('advent_type', ['PROBIS'])
       } else if (adventType === 'REQUEST') {
         mainQuery = ObsoleteRequest
           .where('document_obsoletes.advent_type', adventType)
