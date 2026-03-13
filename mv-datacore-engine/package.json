@@ -5,8 +5,8 @@
   "description": "",
   "scripts": {
     "start": "npx mv-data-core start",
-    "build": "docker build -t \"mvdevops/data-core:$(sh version.sh)\" -f staging.dockerfile .",
-    "push": "docker push \"mvdevops/data-core:$(sh version.sh)\"",
+    "build": "docker build -t \"mvdevops/data-core:sptp-v1\" -f staging.dockerfile .",
+    "push": "docker push \"mvdevops/data-core:sptp-v1\"",
     "dev": "cross-env EXTENSIONS_AUTO_RELOAD=true npx mv-data-core start",
     "upgrade": "npm i mv-data-core",
     "bootstrap": "sh setup.sh"
@@ -26,5 +26,8 @@
     "command-line-args": "^5.2.0",
     "cross-env": "^7.0.3",
     "swagger-ui-express": "^4.3.0"
+  },
+  "resolutions": {
+    "@azure/keyvault-keys": "4.6.0"
   }
 }

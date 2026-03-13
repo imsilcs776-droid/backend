@@ -489,34 +489,66 @@ export default class DefineEndpoint {
 
       const { id } = await item.getUser({ req, UsersService })
 
+      // const logOfficerQuery = database('submissions')
+      //   .select('submissions.id as id')
+      //   /**
+      //    * ims
+      //    */
+      //   .join('document_metas', 'document_metas.submission', 'submissions.id')
+      //   /**
+      //    *
+      //    */
+      //   .join('statuses', 'statuses.id', 'submissions.status')
+      //   .join('form_logs', 'form_logs.id', 'submissions.current_form_log')
+      //   .join('approve_orders', 'approve_orders.id', 'form_logs.next_order')
+      //   .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
+      //   .join('form_assesors', function (qb: any) {
+      //     qb.on('form_assesors.form_actor', '=', 'form_actors.id')
+      //     qb.on('form_assesors.submission', '=', 'form_logs.submission')
+      //   })
+      //   .whereNull('statuses.deleted_at')
+      //   .whereNull('approve_orders.deleted_at')
+      //   .whereNull('form_actors.deleted_at')
+      //   .whereNull('form_assesors.deleted_at')
+      //   .where('statuses.code', '<>', 'REJCT')
+      //   .where('statuses.code', '<>', 'COMPL')
+      //   .where('form_assesors.officer', id)
+      //   .where('submissions.business', business_id)
+      //   /**
+      //    * ims
+      //    */
+      //   .whereNull('document_metas.deleted_at')
+
       const logOfficerQuery = database('submissions')
         .select('submissions.id as id')
-        /**
-         * ims
-         */
         .join('document_metas', 'document_metas.submission', 'submissions.id')
-        /**
-         *
-         */
         .join('statuses', 'statuses.id', 'submissions.status')
         .join('form_logs', 'form_logs.id', 'submissions.current_form_log')
-        .join('approve_orders', 'approve_orders.id', 'form_logs.approve_order')
-        .join('form_actors', 'approve_orders.approve_to', 'form_actors.id')
-        .join('form_assesors', function (qb: any) {
-          qb.on('form_assesors.form_actor', '=', 'form_actors.id')
-          qb.on('form_assesors.submission', '=', 'form_logs.submission')
-        })
+        .join('approve_orders', 'approve_orders.id', 'form_logs.next_order')
+        .join('form_actors', 'approve_orders.assign_to', 'form_actors.id')
+        .join(
+          database('form_assesors')
+            .select('*')
+            .where(
+              'id',
+              database.raw(
+                '(SELECT MAX(fa2.id) FROM form_assesors AS fa2 WHERE fa2.form_actor = form_assesors.form_actor AND fa2.submission = form_assesors.submission)'
+              )
+            )
+            .as('form_assesors_max'),
+          function (qb: any) {
+            qb.on('form_assesors_max.form_actor', '=', 'form_actors.id')
+            qb.on('form_assesors_max.submission', '=', 'form_logs.submission')
+          }
+        )
         .whereNull('statuses.deleted_at')
         .whereNull('approve_orders.deleted_at')
         .whereNull('form_actors.deleted_at')
-        .whereNull('form_assesors.deleted_at')
+        .whereNull('form_assesors_max.deleted_at')
         .where('statuses.code', '<>', 'REJCT')
         .where('statuses.code', '<>', 'COMPL')
-        .where('form_assesors.officer', id)
+        .where('form_assesors_max.officer', id)
         .where('submissions.business', business_id)
-        /**
-         * ims
-         */
         .whereNull('document_metas.deleted_at')
 
       if (search) {
@@ -921,19 +953,30 @@ export default class DefineEndpoint {
           'form_logs.approve_order'
         )
         .join('form_actors', 'form_rejections.reject_to', 'form_actors.id')
-        .join('form_assesors', function (qb: any) {
-          qb.on('form_assesors.submission', '=', 'form_logs.submission')
-          qb.on('form_assesors.form_actor', '=', 'form_actors.id')
-        })
+        .join(
+          database('form_assesors')
+            .select('*')
+            .where(
+              'id',
+              database.raw(
+                '(SELECT MAX(fa2.id) FROM form_assesors AS fa2 WHERE fa2.form_actor = form_assesors.form_actor AND fa2.submission = form_assesors.submission)'
+              )
+            )
+            .as('form_assesors_max'),
+          function (qb: any) {
+            qb.on('form_assesors_max.form_actor', '=', 'form_actors.id')
+            qb.on('form_assesors_max.submission', '=', 'form_logs.submission')
+          }
+        )
         .whereNull('statuses.deleted_at')
         .whereNull('approve_orders.deleted_at')
         .whereNull('form_actors.deleted_at')
-        .whereNull('form_assesors.deleted_at')
+        .whereNull('form_assesors_max.deleted_at')
         .where('submissions.business', business_id)
         .where('form_reject_types.code', 'RVISI')
         .where('statuses.code', 'REJCT')
         .where('statuses.code', '<>', 'COMPL')
-        .where('form_assesors.officer', id)
+        .where('form_assesors_max.officer', id)
         /**
          * ims
          */
@@ -1582,12 +1625,28 @@ export default class DefineEndpoint {
         dirLog,
         unitsLog,
         areaLog,
+        isReviceFromDraft = false,
+        lastRevice,
       } = Object.keys(detail).reduce((acc: any, ctx: string) => {
         if (ctx === 'judul') {
           acc[ctx] = detail[ctx].value
         }
         if (ctx.toLowerCase().includes('deskripsi')) {
           acc['description'] = detail[ctx].value
+        }
+
+        if (ctx.toLowerCase().includes('evaluasi_dan_riwayat_perubahan')) {
+          const reviceHistories = detail[ctx].value || []
+          acc.isReviceFromDraft = reviceHistories.length > 0
+          acc.lastRevice = reviceHistories
+            .map((revice: any) => {
+              const getDocNum =
+                revice.hasilEvaluasiDanRiwayatPerubahan.split('dengan nomor')
+              const [text, docNum] = getDocNum
+              return docNum?.trim()
+            })
+            .filter(Boolean) // Filter out undefined or null values
+            .pop() // Get the last document number
         }
         if (ctx === 'penomoran_dokumen') {
           const {
@@ -1617,6 +1676,26 @@ export default class DefineEndpoint {
 
       const now = new Date()
       now.setSeconds(now.getSeconds() - 30)
+
+      let reviceIdFromDraftRepo
+      let reviceIdFromDraftProbis
+      if (isReviceFromDraft && lastRevice) {
+        const revice =
+          (await trx('repo_document_submissions')
+            .select('id')
+            .where('number', lastRevice)
+            .first()) || {}
+        reviceIdFromDraftRepo = revice?.id
+
+        const revicePublish =
+          (await trx('file_publishers')
+            .select('file_publishers.submission')
+            .join('statuses', 'statuses.id', 'file_publishers.status')
+            .where('statuses.code', 'PUBLS')
+            .where('file_publishers.document_number', lastRevice)
+            .first()) || {}
+        reviceIdFromDraftProbis = revicePublish?.submission
+      }
 
       const { id: lastSubmissionId, judul: judulLastSubmission } =
         (await trx('submissions')
@@ -1728,11 +1807,11 @@ export default class DefineEndpoint {
            * WARNING
            * revise contain ims
            */
-          revise: Boolean(Number(is_revice || 0)),
-          submission_revice,
+          revise: !!is_revice || !!isReviceFromDraft,
+          submission_revice: submission_revice || reviceIdFromDraftProbis,
           status: statusesId,
-          repo_revice,
-          com_code: pegawai || 'PELINDO',
+          repo_revice: repo_revice || reviceIdFromDraftRepo,
+          com_code: pegawai || 'PLND',
         })
         .returning('*')
 
@@ -1763,17 +1842,17 @@ export default class DefineEndpoint {
         .update({ current_form_log: idLog })
 
       await trx('form_assesors').insert([
-        {
-          created_by: userId,
-          created_at: new Date(),
-          updated_at: new Date(),
-          submission: submissionId,
-          form_actor: assignTo,
-          officer: userId,
-          disposer: false,
-          form_log: idLog,
-          replaced,
-        },
+        // {
+        //   created_by: userId,
+        //   created_at: new Date(),
+        //   updated_at: new Date(),
+        //   submission: submissionId,
+        //   form_actor: assignTo,
+        //   officer: userId,
+        //   disposer: false,
+        //   // form_log: idLog,
+        //   replaced,
+        // },
         {
           created_by: userId,
           created_at: new Date(),
@@ -1791,6 +1870,22 @@ export default class DefineEndpoint {
           .where({ id: draft_id })
           .update({ deleted_at: new Date() })
       }
+
+      // console.log({
+      //   depts_log: deptsLog,
+      //   div_log: divLog,
+      //   dir_log: dirLog,
+      //   units_log: unitsLog,
+      //   area_log: areaLog,
+      // })
+
+      // return {
+      //   depts_log: deptsLog,
+      //   div_log: divLog,
+      //   dir_log: dirLog,
+      //   units_log: unitsLog,
+      //   area_log: areaLog,
+      // }
 
       const idMeta = v4()
       await trx('document_metas').insert({
@@ -1811,12 +1906,13 @@ export default class DefineEndpoint {
          */
         area_numbering_apply: applicableFor,
         code: 'PROBIS345',
-        com_code: pegawai || 'PELINDO',
-        depts_log: deptsLog,
-        div_log: divLog,
-        dir_log: dirLog,
-        units_log: unitsLog,
-        area_log: areaLog,
+        com_code: pegawai || 'PLND',
+        depts_log: JSON.stringify(deptsLog),
+        div_log: JSON.stringify(divLog),
+        dir_log: JSON.stringify(dirLog),
+        units_log: JSON.stringify(unitsLog),
+        area_log: JSON.stringify(areaLog),
+        version: 2,
       })
 
       if (departments && departments.length) {
@@ -2149,11 +2245,13 @@ export default class DefineEndpoint {
         id: currentAppOrderId,
         order: currentOrder,
         approve_to: approveTo,
+        assign_to: assignTo,
       } = await trx('approve_orders')
         .select(
           'approve_orders.id',
           'approve_orders.order',
-          'approve_orders.approve_to'
+          'approve_orders.approve_to',
+          'approve_orders.assign_to'
         )
         .whereNull('approve_orders.deleted_at')
         .where('approve_orders.id', approve_order)
@@ -2163,25 +2261,52 @@ export default class DefineEndpoint {
       let nextOrder
       if (currentStatusCode === 'DISPS') {
         nextOrder = currentAppOrderId
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assignTo,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
       }
 
       /**
        * status status revised kembali ke pertama
        */
       if (currentStatusCode === 'RVSED') {
-        const { id: revisedApproveOrderId } = (await await trx('approve_orders')
-          .select('approve_orders.id')
+        const { id: revisedApproveOrderId, assign_to } = (await await trx(
+          'approve_orders'
+        )
+          .select('approve_orders.id', 'approve_orders.assign_to')
           .whereNull('approve_orders.deleted_at')
           .where('approve_orders.activity', activity)
           .where('approve_orders.order', 2)
           .first()) || {
           id: null,
         }
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assign_to,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
+
         nextOrder = revisedApproveOrderId
       }
       if (currentStatusCode === 'APPRD' || currentStatusCode === 'WAITN') {
-        const { id: approveApproveOrderId } = (await await trx('approve_orders')
-          .select('approve_orders.id')
+        const { id: approveApproveOrderId, assign_to } = (await await trx(
+          'approve_orders'
+        )
+          .select('approve_orders.id', 'approve_orders.assign_to')
           .whereNull('approve_orders.deleted_at')
           .where('approve_orders.activity', activity)
           .where('approve_orders.order', currentOrder + 1)
@@ -2189,10 +2314,25 @@ export default class DefineEndpoint {
           id: null,
         }
         nextOrder = approveApproveOrderId
+
+        console.log('assign_to', assign_to)
+
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          form_actor: assign_to,
+          officer: dispose_to ?? assignToUserId,
+          disposer: !!dispose_to,
+          replaced,
+        })
       }
       if (currentStatusCode === 'COMPL') {
         nextOrder = null
       }
+
+      console.log('nextOrder', nextOrder, currentStatusCode, currentOrder)
 
       /**
        * update form actor
@@ -2255,29 +2395,6 @@ export default class DefineEndpoint {
         })
         .returning('id')
 
-      if (approveTo) {
-        await trx('form_assesors')
-          .update({ form_log: idLog })
-          .where('id', '=', function (qb: any) {
-            qb.select('id')
-              .from('form_assesors')
-              .where('submission', submissionId)
-              .orderBy('id', 'desc')
-              .limit(1)
-          })
-
-        await trx('form_assesors').insert({
-          created_by: userId,
-          created_at: new Date(),
-          updated_at: new Date(),
-          submission: submissionId,
-          form_actor: approveTo,
-          officer: dispose_to ?? assignToUserId,
-          disposer: !!dispose_to,
-          replaced,
-        })
-      }
-
       await trx('submissions')
         .where({ id: submissionId })
         .update({ current_form_log: idLog })
@@ -2303,6 +2420,11 @@ export default class DefineEndpoint {
         applicableFor,
         departments = [],
         units = [],
+        deptsLog,
+        divLog,
+        dirLog,
+        unitsLog,
+        areaLog,
       } = Object.keys(detail).reduce((acc: any, ctx: string) => {
         if (ctx === 'judul') {
           acc[ctx] = detail[ctx].value
@@ -2324,6 +2446,12 @@ export default class DefineEndpoint {
           acc.directorate = directorate?.id || null
           acc.division = division?.id || null
           acc.applicableFor = applicableFor?.id || null
+
+          acc.deptsLog = department
+          acc.divLog = division
+          acc.dirLog = directorate
+          acc.unitsLog = units
+          acc.areaLog = applicableFor
         }
         return acc
       }, {})
@@ -2344,6 +2472,11 @@ export default class DefineEndpoint {
            * contain IMS
            */
           area_numbering_apply: applicableFor,
+          depts_log: JSON.stringify(deptsLog),
+          div_log: JSON.stringify(divLog),
+          dir_log: JSON.stringify(dirLog),
+          units_log: JSON.stringify(unitsLog),
+          area_log: JSON.stringify(areaLog),
         })
         .where({ submission: submissionId })
         .returning('*')
@@ -2585,7 +2718,7 @@ export default class DefineEndpoint {
       /**
        * get statuses id
        */
-      const [{ code: currentStatusCode = 'RVISI' }] = await trx('statuses')
+      const [{ code: currentStatusCode = 'REJCT' }] = await trx('statuses')
         .select('statuses.code')
         .where('statuses.id', status)
         .whereNull('statuses.deleted_at')
@@ -2613,7 +2746,16 @@ export default class DefineEndpoint {
         }
         formActor = assign_to
 
-        console.log(assign_to, revisedApproveOrderId)
+        console.log('assign_to', assign_to, revisedApproveOrderId)
+        await trx('form_assesors').insert({
+          created_by: userId,
+          created_at: new Date(),
+          updated_at: new Date(),
+          submission: submissionId,
+          officer: assignToUserId,
+          form_actor: assign_to,
+        })
+
         nextOrder = revisedApproveOrderId
       } else if (
         currentStatusCode === 'REJCT' &&
@@ -2684,24 +2826,15 @@ export default class DefineEndpoint {
         })
         .returning('id')
 
-      await trx('form_assesors')
-        .update({ form_log: idLog })
-        .where('id', '=', function (qb: any) {
-          qb.select('id')
-            .from('form_assesors')
-            .where('submission', submissionId)
-            .orderBy('id', 'desc')
-            .limit(1)
-        })
-
-      await trx('form_assesors').insert({
-        created_by: userId,
-        created_at: new Date(),
-        updated_at: new Date(),
-        submission: submissionId,
-        officer: assignToUserId,
-        form_actor: formActor,
-      })
+      // await trx('form_assesors')
+      //   .update({ form_log: idLog })
+      //   .where('id', '=', function (qb: any) {
+      //     qb.select('id')
+      //       .from('form_assesors')
+      //       .where('submission', submissionId)
+      //       .orderBy('id', 'desc')
+      //       .limit(1)
+      //   })
 
       await trx('submissions')
         .where({ id: submissionId })
@@ -3039,8 +3172,8 @@ export default class DefineEndpoint {
         .where('approve_orders.order', 1)
         .orderBy('form_logs.created_at', 'asc')
         .first()) || {
-        id: null,
-      }
+          id: null,
+        }
       const formActor = assign_to
       const nextOrder = revisedApproveOrderId
 
@@ -3104,15 +3237,15 @@ export default class DefineEndpoint {
         })
         .returning('id')
 
-      await trx('form_assesors')
-        .update({ form_log: idLog })
-        .where('id', '=', function (qb: any) {
-          qb.select('id')
-            .from('form_assesors')
-            .where('submission', submissionId)
-            .orderBy('id', 'desc')
-            .limit(1)
-        })
+      // await trx('form_assesors')
+      //   .update({ form_log: idLog })
+      //   .where('id', '=', function (qb: any) {
+      //     qb.select('id')
+      //       .from('form_assesors')
+      //       .where('submission', submissionId)
+      //       .orderBy('id', 'desc')
+      //       .limit(1)
+      //   })
 
       await trx('form_assesors').insert({
         created_by: userId,
