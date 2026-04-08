@@ -19,6 +19,570 @@ import client from './providers'
 @Endpoint('ims')
 export default class DefineEndpoint {
   @Get(
+    {
+      path: '/document-permits/reviewer-users/ids',
+      tag: 'IMS/document-permits',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+      parameters: [
+        {
+          in: 'query',
+          name: 'query',
+          schema: { type: 'string' },
+          required: false,
+        },
+      ],
+    }
+  )
+  async permitReviewerUserIds(
+    @Context() ctx: any,
+    @Query('query') query: string
+  ) {
+    try {
+      const { database } = ctx
+
+      const userQuery = database('directus_users')
+        .distinct('id')
+        .select('id')
+        .whereNull('deleted_at')
+
+      if (query) {
+        userQuery.andWhere((builder: any) => {
+          builder
+            .where('email', 'ilike', `%${query}%`)
+            .orWhere('first_name', 'ilike', `%${query}%`)
+            .orWhere('last_name', 'ilike', `%${query}%`)
+            .orWhere('full_name', 'ilike', `%${query}%`)
+        })
+      }
+
+      const rows = await userQuery.orderBy('full_name', 'asc')
+
+      return {
+        success: true,
+        message: 'Successfully',
+        data: rows.map((row: any) => row.id),
+        meta: {
+          count: rows.length,
+        },
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    {
+      path: '/document-permits/departments/ids',
+      tag: 'IMS/document-permits',
+    },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+      parameters: [
+        {
+          in: 'query',
+          name: 'query',
+          schema: { type: 'string' },
+          required: false,
+        },
+      ],
+    }
+  )
+  async permitDepartmentIds(
+    @Context() ctx: any,
+    @Req() req: any,
+    @Query('query') query: string
+  ) {
+    try {
+      const {
+        services: { UsersService },
+        database,
+      } = ctx
+      const currentUser = await item.getUser({ req, UsersService })
+
+      const departmentQuery = database('mt_departments')
+        .distinct('id')
+        .select('id')
+        .whereNotNull('i_com_code')
+        .where('code', '<>', '-')
+        .where('source', 'PEO')
+        .where('instansi', currentUser.instansi)
+
+      if (currentUser.i_werk !== '1000') {
+        departmentQuery.andWhere('i_com_code', currentUser.i_werk)
+      }
+
+      if (query) {
+        departmentQuery.andWhere((builder: any) => {
+          builder
+            .where('name', 'ilike', `%${query}%`)
+            .orWhere('code', 'ilike', `%${query}%`)
+        })
+      }
+
+      const rows = await departmentQuery.orderBy('name', 'asc')
+
+      return {
+        success: true,
+        message: 'Successfully',
+        data: rows.map((row: any) => row.id),
+        meta: {
+          count: rows.length,
+        },
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    { path: '/document-submissions/lite', tag: 'IMS/document-submissions' },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async documentSubmissionsLite(
+    @Context() ctx: any,
+    @Req() req: any,
+    @Query('business') business: number,
+    @Query('title') title: string,
+    @Query('directorate') directorate: number,
+    @Query('division') division: number,
+    @Query('departments') departments: number[] | number,
+    @Query('units') units: number[] | number,
+    @Query('applicable_for') applicableFor: string,
+    @Query('limit') limit: number = 5,
+    @Query('page') page: number = 1
+  ) {
+    try {
+      const {
+        services: { UsersService },
+        database,
+      } = ctx
+      const { id: userId } = await item.getUser({ req, UsersService })
+
+      const normalizeArray = (value: number[] | number | string[] | string) => {
+        if (value === undefined || value === null || value === '') return []
+        return (Array.isArray(value) ? value : [value])
+          .map((item: any) => Number(item))
+          .filter((item: number) => !Number.isNaN(item))
+      }
+
+      const departmentIds = normalizeArray(departments as any)
+      const unitIds = normalizeArray(units as any)
+
+      const baseQuery = database('submissions')
+        .join('document_metas', 'document_metas.submission', 'submissions.id')
+        .join('statuses', 'statuses.id', 'submissions.status')
+        .join('forms', 'forms.id', 'submissions.form')
+        .join('Businesses', 'Businesses.id', 'submissions.business')
+        .leftJoin('form_logs', 'form_logs.id', 'submissions.current_form_log')
+        .leftJoin(
+          'directus_users as reviewers',
+          'reviewers.id',
+          'form_logs.created_by'
+        )
+        .leftJoin(
+          'mt_departments as directorates',
+          'directorates.id',
+          'document_metas.department_directorat'
+        )
+        .leftJoin(
+          'mt_departments as divisions',
+          'divisions.id',
+          'document_metas.department_division'
+        )
+        .leftJoin(
+          'area_numbering_applies as areas',
+          'areas.id',
+          'document_metas.area_numbering_apply'
+        )
+        .where('submissions.user_created', userId)
+        .where('submissions.business', business)
+
+      if (title) {
+        baseQuery.where('document_metas.judul', 'ilike', `%${title}%`)
+      }
+
+      if (directorate) {
+        baseQuery.where('document_metas.department_directorat', directorate)
+      }
+
+      if (division) {
+        baseQuery.where('document_metas.department_division', division)
+      }
+
+      if (applicableFor) {
+        baseQuery.where('document_metas.area_numbering_apply', applicableFor)
+      }
+
+      if (departmentIds.length) {
+        baseQuery.whereExists(function (this: any) {
+          this.select(database.raw('1'))
+            .from('document_departments')
+            .whereRaw('document_departments.submission = submissions.id')
+            .whereIn('document_departments.department', departmentIds)
+        })
+      }
+
+      if (unitIds.length) {
+        baseQuery.whereExists(function (this: any) {
+          this.select(database.raw('1'))
+            .from('document_units')
+            .whereRaw('document_units.submission = submissions.id')
+            .whereIn('document_units.unit', unitIds)
+        })
+      }
+
+      const [{ count }] = await baseQuery
+        .clone()
+        .clearSelect()
+        .clearOrder()
+        .countDistinct({ count: 'submissions.id' })
+
+      const rows = await baseQuery
+        .clone()
+        .select(
+          'submissions.id',
+          'submissions.activity',
+          'submissions.form',
+          'submissions.business',
+          'submissions.submission_number',
+          'submissions.date_created as created_at',
+          'document_metas.judul',
+          'statuses.name as status_name',
+          'statuses.backgroundColor as status_background_color',
+          'forms.title as form_title',
+          'Businesses.name as business_name',
+          'reviewers.full_name as reviewer_name',
+          'directorates.name as directorate_name',
+          'divisions.name as division_name',
+          'areas.name as applicable_for_name'
+        )
+        .orderBy('submissions.date_created', 'desc')
+        .limit(limit)
+        .offset((page - 1) * limit)
+
+      const submissionIds = rows.map((row: any) => row.id)
+
+      const departmentRows = submissionIds.length
+        ? await database('document_departments')
+            .select(
+              'document_departments.submission',
+              'mt_departments.id',
+              'mt_departments.code',
+              'mt_departments.name',
+              'mt_departments.label'
+            )
+            .join(
+              'mt_departments',
+              'mt_departments.id',
+              'document_departments.department'
+            )
+            .whereIn('document_departments.submission', submissionIds)
+        : []
+
+      const assessorRows = submissionIds.length
+        ? await database('form_assesors as form_assesors')
+            .select(
+              'form_assesors.submission',
+              'form_assesors.created_at',
+              'form_assesors.id',
+              'officers.full_name as officer_full_name',
+              'form_actors.name as form_actor_name'
+            )
+            .join(
+              'directus_users as officers',
+              'officers.id',
+              'form_assesors.officer'
+            )
+            .join(
+              'form_actors',
+              'form_actors.id',
+              'form_assesors.form_actor'
+            )
+            .whereIn('form_assesors.submission', submissionIds)
+            .orderBy('form_assesors.created_at', 'desc')
+            .orderBy('form_assesors.id', 'desc')
+        : []
+
+      const departmentMap = departmentRows.reduce((acc: any, row: any) => {
+        if (!acc[row.submission]) acc[row.submission] = []
+        acc[row.submission].push({
+          id: row.id,
+          code: row.code,
+          name: row.name,
+          label: row.label || `${row.code} - ${row.name}`,
+        })
+        return acc
+      }, {})
+
+      const assessorMap = assessorRows.reduce((acc: any, row: any) => {
+        if (!acc[row.submission]) {
+          acc[row.submission] = row
+        }
+        return acc
+      }, {})
+
+      const data = rows.map((row: any) => {
+        const latestAssessor = assessorMap[row.id]
+        const labelNext = latestAssessor
+          ? `${latestAssessor.form_actor_name || '-'} ${latestAssessor.officer_full_name || '-'}`
+          : '-'
+
+        return {
+          id: row.id,
+          submission_number: row.submission_number,
+          created_at: row.created_at,
+          business: {
+            id: row.business,
+            name: row.business_name,
+          },
+          form: {
+            id: row.form,
+            title: row.form_title,
+          },
+          status: {
+            name: row.status_name,
+            backgroundColor: row.status_background_color,
+          },
+          current_form_log: {
+            created_by: {
+              full_name: row.reviewer_name,
+            },
+          },
+          data: {
+            activity_id: row.activity,
+            detail: {
+              judul: {
+                value: row.judul,
+              },
+              penomoran_dokumen: {
+                value: {
+                  directorate: {
+                    name: row.directorate_name,
+                  },
+                  division: {
+                    name: row.division_name,
+                  },
+                  department: departmentMap[row.id] || [],
+                  applicableFor: {
+                    name: row.applicable_for_name,
+                  },
+                },
+              },
+            },
+          },
+          label_status: `${row.status_name || '-'} - ${row.reviewer_name || '-'}`,
+          label_next: labelNext.trim(),
+          assessors: latestAssessor
+            ? [
+                {
+                  created_at: latestAssessor.created_at,
+                  officer: {
+                    full_name: latestAssessor.officer_full_name,
+                  },
+                  form_actor: {
+                    name: latestAssessor.form_actor_name,
+                  },
+                },
+              ]
+            : [],
+        }
+      })
+
+      return {
+        success: true,
+        message: 'Successfully',
+        data,
+        meta: {
+          count: Number(count || 0),
+          total_page: Math.ceil(Number(count || 0) / limit),
+          current_page: page,
+          limit,
+        },
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
+    { path: '/submission-drafts/lite', tag: 'IMS/submission-drafts' },
+    {
+      responses: [
+        {
+          200: {
+            description: 'Description',
+            responseType: 'object',
+            schema: {
+              type: 'object',
+              properties: {
+                msg: {
+                  type: 'string',
+                },
+              },
+            },
+          },
+        },
+      ],
+    }
+  )
+  async submissionDraftsLite(
+    @Context() ctx: any,
+    @Req() req: any,
+    @Query('business') business: number,
+    @Query('limit') limit: number = 5,
+    @Query('page') page: number = 1
+  ) {
+    try {
+      const {
+        services: { UsersService },
+        database,
+      } = ctx
+      const { id: userId } = await item.getUser({ req, UsersService })
+
+      const baseQuery = database('submission_drafts')
+        .join('statuses', 'statuses.id', 'submission_drafts.status')
+        .join('forms', 'forms.id', 'submission_drafts.form')
+        .leftJoin('activities', 'activities.id', 'submission_drafts.activity')
+        .leftJoin(
+          'Businesses as activity_businesses',
+          'activity_businesses.id',
+          'activities.business'
+        )
+        .where('submission_drafts.created_by', userId)
+        .where('submission_drafts.business', business)
+
+      const [{ count }] = await baseQuery
+        .clone()
+        .clearSelect()
+        .clearOrder()
+        .countDistinct({ count: 'submission_drafts.id' })
+
+      const rows = await baseQuery
+        .clone()
+        .select(
+          'submission_drafts.id',
+          'submission_drafts.business',
+          'submission_drafts.created_at',
+          'submission_drafts.activity',
+          database.raw(
+            `"submission_drafts"."data" #>> '{detail,judul,value}' as judul`
+          ),
+          'statuses.name as status_name',
+          'statuses.backgroundColor as status_background_color',
+          'forms.id as form_id',
+          'forms.title as form_title',
+          'activity_businesses.activities as business_activities'
+        )
+        .orderBy('submission_drafts.created_at', 'desc')
+        .limit(limit)
+        .offset((page - 1) * limit)
+
+      const data = rows.map((row: any) => ({
+        id: row.id,
+        business: row.business,
+        created_at: row.created_at,
+        status: {
+          name: row.status_name,
+          backgroundColor: row.status_background_color,
+        },
+        form: {
+          id: row.form_id,
+          title: row.form_title,
+        },
+        activity: {
+          id: row.activity,
+          business: {
+            activities: row.business_activities || [],
+          },
+        },
+        data: {
+          detail: {
+            judul: {
+              value: row.judul,
+            },
+          },
+        },
+        label_status: row.status_name,
+      }))
+
+      return {
+        success: true,
+        message: 'Successfully',
+        data,
+        meta: {
+          count: Number(count || 0),
+          total_page: Math.ceil(Number(count || 0) / limit),
+          current_page: page,
+          limit,
+        },
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message ?? error,
+      }
+    }
+  }
+
+  @Get(
     { path: '/file-publisers/lite', tag: 'IMS/file-publisers' },
     {
       responses: [
