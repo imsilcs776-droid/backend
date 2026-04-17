@@ -711,10 +711,6 @@ export default class DefineEndpoint {
         },
       } as any
 
-      if (includeData == 1) {
-        params.formLogParam.fields.push('data')
-      }
-
       if (limit) {
         params.formLogParam.page = 1
         params.formLogParam.limit = limit
@@ -731,6 +727,85 @@ export default class DefineEndpoint {
         name: 'form_logs',
         params: params.formLogParam,
       })
+
+      const reviewSubmissionIds = [
+        ...new Set(
+          data
+            .map(({ submission }: any) => submission)
+            .filter((submission: any) => !!submission)
+        ),
+      ]
+
+      const documentMetaRows = reviewSubmissionIds.length
+        ? await database('submissions')
+            .select(
+              'submissions.id as submission_id',
+              'document_metas.judul',
+              'document_metas.description as deskripsi_pengusulan___perubahan',
+              'directorates.name as directorate_name',
+              'divisions.name as division_name',
+              'areas.name as applicable_for_name'
+            )
+            .join('document_metas', 'document_metas.submission', 'submissions.id')
+            .leftJoin(
+              'mt_departments as directorates',
+              'directorates.id',
+              'document_metas.department_directorat'
+            )
+            .leftJoin(
+              'mt_departments as divisions',
+              'divisions.id',
+              'document_metas.department_division'
+            )
+            .leftJoin(
+              'area_numbering_applies as areas',
+              'areas.id',
+              'document_metas.area_numbering_apply'
+            )
+            .whereIn('submissions.id', reviewSubmissionIds)
+        : []
+
+      const departmentRows = reviewSubmissionIds.length
+        ? await database('document_departments')
+            .select(
+              'document_departments.submission as submission_id',
+              'mt_departments.id',
+              'mt_departments.code',
+              'mt_departments.name'
+            )
+            .join(
+              'mt_departments',
+              'mt_departments.id',
+              'document_departments.department'
+            )
+            .whereIn('document_departments.submission', reviewSubmissionIds)
+        : []
+
+      const metaBySubmission = documentMetaRows.reduce(
+        (acc: Record<string, any>, row: any) => {
+          acc[row.submission_id] = row
+          return acc
+        },
+        {}
+      )
+
+      const departmentsBySubmission = departmentRows.reduce(
+        (acc: Record<string, any[]>, row: any) => {
+          if (!acc[row.submission_id]) {
+            acc[row.submission_id] = []
+          }
+
+          acc[row.submission_id].push({
+            id: row.id,
+            code: row.code,
+            name: row.name,
+            label: `${row.code} - ${row.name}`,
+          })
+
+          return acc
+        },
+        {}
+      )
 
       /**
        * remove reject type "tidak lanjut" dan type "revisi"
@@ -751,7 +826,9 @@ export default class DefineEndpoint {
         })
         .map((dt: any) => {
           const { approve_to, id, assign_to } = dt.next_order || {}
-          const { detail } = dt.data || {}
+          const submissionMeta = metaBySubmission[dt.submission] || {}
+          const submissionDepartments =
+            departmentsBySubmission[dt.submission] || []
 
           /**
            * add is_last_order
@@ -761,12 +838,22 @@ export default class DefineEndpoint {
             is_last_order = true
           }
           dt.next_order = { id, approve_to, is_last_order, assign_to }
-
-          if (detail) {
-            dt.data = Object.keys(detail).reduce((acc: any, ctx: string) => {
-              acc[ctx] = detail[ctx].value
-              return acc
-            }, {})
+          dt.data = {
+            judul: submissionMeta.judul || null,
+            deskripsi_pengusulan___perubahan:
+              submissionMeta.deskripsi_pengusulan___perubahan || null,
+            penomoran_dokumen: {
+              directorate: {
+                name: submissionMeta.directorate_name || null,
+              },
+              division: {
+                name: submissionMeta.division_name || null,
+              },
+              department: submissionDepartments,
+              applicableFor: {
+                name: submissionMeta.applicable_for_name || null,
+              },
+            },
           }
 
           return dt

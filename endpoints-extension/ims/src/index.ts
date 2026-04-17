@@ -303,7 +303,6 @@ export default class DefineEndpoint {
           'submissions.date_created as created_at',
           'document_metas.judul',
           'statuses.name as status_name',
-          'statuses.backgroundColor as status_background_color',
           'forms.title as form_title',
           'Businesses.name as business_name',
           'reviewers.full_name as reviewer_name',
@@ -323,8 +322,7 @@ export default class DefineEndpoint {
               'document_departments.submission',
               'mt_departments.id',
               'mt_departments.code',
-              'mt_departments.name',
-              'mt_departments.label'
+              'mt_departments.name'
             )
             .join(
               'mt_departments',
@@ -364,7 +362,7 @@ export default class DefineEndpoint {
           id: row.id,
           code: row.code,
           name: row.name,
-          label: row.label || `${row.code} - ${row.name}`,
+          label: `${row.code} - ${row.name}`,
         })
         return acc
       }, {})
@@ -396,7 +394,7 @@ export default class DefineEndpoint {
           },
           status: {
             name: row.status_name,
-            backgroundColor: row.status_background_color,
+            backgroundColor: null,
           },
           current_form_log: {
             created_by: {
@@ -526,7 +524,6 @@ export default class DefineEndpoint {
             `"submission_drafts"."data" #>> '{detail,judul,value}' as judul`
           ),
           'statuses.name as status_name',
-          'statuses.backgroundColor as status_background_color',
           'forms.id as form_id',
           'forms.title as form_title',
           'activity_businesses.activities as business_activities'
@@ -541,7 +538,7 @@ export default class DefineEndpoint {
         created_at: row.created_at,
         status: {
           name: row.status_name,
-          backgroundColor: row.status_background_color,
+          backgroundColor: null,
         },
         form: {
           id: row.form_id,
